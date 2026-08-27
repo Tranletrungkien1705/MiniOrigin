@@ -1,0 +1,94 @@
+@model Lot
+@{ ViewData["Title"] = $"Lô {Model.Code}"; var ctes = (List<Cte>)ViewBag.Ctes; var glns = (List<Gln>)ViewBag.Glns; var parents = (List<Lot>)ViewBag.Parents;
+   var (st, css) = Ui.Lot(Model.Status);
+   var traceUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/Trace/{Model.Code}"; }
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3"><div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><h5 class="fw-bold mb-1">@Model.ProductName <span class="badge bg-@css ms-1">@st</span></h5>
+                    <div class="text-muted small">Lô <b>@Model.Code</b> · @Model.Quantity.ToString("N0") @Model.Unit · nguồn: @(Model.OriginGln?.Name ?? "—")</div></div>
+                <a href="/Trace/@Model.Code" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Trang truy xuất</a>
+            </div>
+            @if (parents.Count > 0)
+            {
+                <div class="mt-2 small"><span class="text-muted">Nguyên liệu:</span>
+                    @foreach (var p in parents) { <a href="/Lot/Detail/@p.Id" class="badge bg-light text-dark border text-decoration-none">@p.Code — @p.ProductName</a> }
+                </div>
+            }
+        </div></div>
+        <div class="card"><div class="card-body">
+            <h6 class="fw-bold mb-3">Dòng thời gian truy xuất</h6>
+            @if (Model.Events.Count == 0) { <div class="text-muted">Chưa có sự kiện.</div> }
+            else
+            {
+                <div class="timeline">
+                    @foreach (var e in Model.Events.OrderBy(x => x.Sequence).ThenBy(x => x.EventTime))
+                    {
+                        <div class="node">
+                            <div class="fw-semibold"><i class="bi @e.CteIcon me-1"></i>@e.CteName
+                                <span class="text-muted small ms-1">@e.EventTime.ToString("dd/MM/yyyy HH:mm")</span></div>
+                            <div class="small text-muted">@(e.GlnName ?? "—")@(e.Operator != null ? " · " + e.Operator : "")</div>
+                            @{ Dictionary<string,string>? kd = null; try { kd = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string,string>>(e.KdeJson); } catch {} }
+                            @if (kd != null && kd.Count > 0)
+                            {
+                                <div class="small mt-1">@foreach (var kv in kd) { <span class="badge bg-light text-dark border me-1">@kv.Key: @kv.Value</span> }</div>
+                            }
+                            @if (!string.IsNullOrEmpty(e.Note)) { <div class="small fst-italic text-muted">@e.Note</div> }
+                        </div>
+                    }
+                </div>
+            }
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Ghi sự kiện</h6>
+            <form asp-action="AddEvent" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" />
+                <div class="mb-2"><label class="form-label small text-muted">Loại sự kiện (CTE)</label>
+                    <select name="cteId" id="cteSel" class="form-select form-select-sm" onchange="renderKde()" required>
+                        <option value="">— Chọn —</option>
+                        @foreach (var c in ctes) { <option value="@c.Id">@c.Name</option> }
+                    </select></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-7"><select name="glnId" class="form-select form-select-sm"><option value="">— Địa điểm —</option>@foreach (var g in glns) { <option value="@g.Id">@g.Name</option> }</select></div>
+                    <div class="col-5"><input name="eventTime" type="datetime-local" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" class="form-control form-control-sm" /></div>
+                </div>
+                <div id="kdeFields" class="mb-2"></div>
+                <div class="mb-2"><input name="operatorName" class="form-control form-control-sm" placeholder="Người thực hiện" /></div>
+                <div class="mb-3"><input name="note" class="form-control form-control-sm" placeholder="Ghi chú" /></div>
+                <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Ghi sự kiện</button>
+            </form>
+        </div></div>
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Liên kết nguyên liệu</h6>
+            <form asp-action="Link" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" />
+                <div class="input-group input-group-sm mb-2"><input name="parentCode" class="form-control" placeholder="Mã lô nguyên liệu" required /><input name="quantity" type="number" step="0.001" class="form-control" placeholder="SL" style="max-width:80px" /></div>
+                <button class="btn btn-outline-primary btn-sm w-100">Thêm nguyên liệu</button>
+            </form>
+        </div></div>
+        <div class="card"><div class="card-body text-center">
+            <div class="small text-muted mb-1">Link truy xuất công khai</div>
+            <div class="border rounded p-2 small text-break">@traceUrl</div>
+        </div></div>
+    </div>
+</div>
+@section Scripts {
+<script>
+    const KDE = {
+        @foreach (var c in ctes)
+        {
+            @Html.Raw($"{c.Id}: [" + string.Join(",", c.Kdes.OrderBy(k => k.Ordinal).Select(k => System.Text.Json.JsonSerializer.Serialize(new { key = k.Key, label = k.Label, unit = k.Unit, req = k.Required }))) + "],")
+        }
+    };
+    function renderKde() {
+        const id = document.getElementById('cteSel').value;
+        const box = document.getElementById('kdeFields'); box.innerHTML = '';
+        (KDE[id] || []).forEach(f => {
+            const lbl = f.label + (f.unit ? ' ('+f.unit+')' : '') + (f.req ? ' *' : '');
+            box.insertAdjacentHTML('beforeend',
+                `<input name="kde[${f.key}]" class="form-control form-control-sm mb-2" placeholder="${lbl}" ${f.req?'required':''}/>`);
+        });
+    }
+</script>
+}

@@ -1,0 +1,14 @@
+@{ ViewData["Title"] = "Tạo lô"; var glns = (List<Gln>)ViewBag.Glns; }
+<div class="card" style="max-width:640px"><div class="card-body">
+    <form asp-action="Create" method="post">@Html.AntiForgeryToken()
+        <div class="row g-3">
+            <div class="col-md-6"><label class="form-label small text-muted">Mã lô * (duy nhất toàn cục)</label><input name="code" class="form-control" placeholder="VD GAO-ST25-2026-B" required /></div>
+            <div class="col-md-6"><label class="form-label small text-muted">Sản phẩm *</label><input name="productName" class="form-control" required /></div>
+            <div class="col-md-4"><label class="form-label small text-muted">Số lượng</label><input name="quantity" type="number" step="0.001" class="form-control" /></div>
+            <div class="col-md-4"><label class="form-label small text-muted">Đơn vị</label><input name="unit" class="form-control" placeholder="kg / túi / thùng" /></div>
+            <div class="col-md-4"><label class="form-label small text-muted">Nơi sản xuất (GLN)</label>
+                <select name="originGlnId" class="form-select"><option value="">—</option>@foreach (var g in glns) { <option value="@g.Id">@g.Name</option> }</select></div>
+        </div>
+        <div class="mt-3"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Tạo lô</button> <a href="/Lot" class="btn btn-outline-secondary">Hủy</a></div>
+    </form>
+</div></div>

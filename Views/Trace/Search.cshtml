@@ -1,0 +1,11 @@
+@{ ViewData["Title"] = "Tra cứu nguồn gốc"; }
+<div class="card" style="max-width:520px"><div class="card-body text-center py-4">
+    <i class="bi bi-search" style="font-size:34px;color:#16a34a"></i>
+    <h5 class="fw-bold mt-2">Tra cứu nguồn gốc theo mã lô</h5>
+    <p class="text-muted small">Nhập mã lô in trên bao bì / tem sản phẩm để xem toàn bộ hành trình.</p>
+    @if (ViewBag.NotFound == true) { <div class="alert alert-warning py-2 small">Không tìm thấy mã lô <b>@ViewBag.Code</b>.</div> }
+    <form onsubmit="event.preventDefault(); var c=document.getElementById('c').value.trim(); if(c) location.href='/Trace/'+encodeURIComponent(c);">
+        <div class="input-group"><input id="c" class="form-control" value="@ViewBag.Code" placeholder="VD GAO-ST25-2026-A" /><button class="btn btn-primary">Tra cứu</button></div>
+    </form>
+    <div class="small text-muted mt-3">Mẫu: <a href="/Trace/GAO-ST25-2026-A">GAO-ST25-2026-A</a></div>
+</div></div>

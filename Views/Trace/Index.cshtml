@@ -1,0 +1,49 @@
+@model LotTrace
+@{ Layout = null; ViewData["Title"] = $"Nguồn gốc {Model.Lot.Code}"; }
+@functions {
+    string GlnAddr(LotTrace t) => t.Lot.OriginGln?.Name ?? "";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nguồn gốc @Model.Lot.ProductName</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        * { box-sizing:border-box; }
+        body { margin:0; font-family:"Be Vietnam Pro",sans-serif; background:#f0f7f2; color:#1f2937; padding:16px; }
+        .wrap { max-width:520px; margin:0 auto; }
+        .head { background:linear-gradient(150deg,#16a34a,#166534); color:#fff; border-radius:20px; padding:22px; margin-bottom:16px; }
+        .head .code { opacity:.85; font-size:12px; letter-spacing:1px; }
+        .head h1 { font-size:22px; margin:4px 0 8px; }
+        .head .meta { font-size:13px; opacity:.9; }
+        .verified { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.2); padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; margin-top:8px; }
+        .card { background:#fff; border-radius:16px; padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(2,25,10,.06); }
+        .card h3 { font-size:14px; margin:0 0 12px; color:#166534; text-transform:uppercase; letter-spacing:.5px; }
+        .tl { border-left:2px solid #d1e7d8; margin-left:6px; padding-left:16px; }
+        .tl .n { position:relative; padding-bottom:16px; }
+        .tl .n::before { content:''; position:absolute; left:-23px; top:3px; width:11px; height:11px; border-radius:50%; background:#16a34a; border:2px solid #fff; }
+        .tl .t { font-weight:700; font-size:14px; }
+        .tl .s { font-size:12px; color:#6b7280; }
+        .kde { margin-top:5px; }
+        .kde span { display:inline-block; background:#f0f7f2; border:1px solid #d1e7d8; border-radius:6px; padding:2px 8px; font-size:12px; margin:2px 3px 0 0; }
+        .parent { border-left:3px solid #86efac; padding-left:12px; margin:10px 0; }
+        .parent .pc { font-weight:700; font-size:13px; }
+        .foot { text-align:center; font-size:11px; color:#9ca3af; margin-top:10px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="head">
+        <div class="code">LÔ @Model.Lot.Code</div>
+        <h1>@Model.Lot.ProductName</h1>
+        <div class="meta">Nơi sản xuất: @(GlnAddr(Model) == "" ? "—" : GlnAddr(Model)) · SL @Model.Lot.Quantity.ToString("N0") @Model.Lot.Unit</div>
+        <div class="verified"><i>✓</i> Đã xác thực nguồn gốc GS1</div>
+    </div>
+
+    @await Html.PartialAsync("_Node", Model)
+
+    <div class="foot">MiniOrigin · Truy xuất nguồn gốc theo chuẩn GS1 CTE/KDE</div>
+</div>
+</body>
+</html>

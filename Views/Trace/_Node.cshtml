@@ -1,0 +1,30 @@
+@model LotTrace
+<div class="card">
+    <h3>@(Model.Depth == 0 ? "Hành trình sản phẩm" : $"Nguyên liệu: {Model.Lot.ProductName} ({Model.Lot.Code})")</h3>
+    @if (Model.Events.Count == 0) { <div style="color:#9ca3af;font-size:13px">Chưa có sự kiện.</div> }
+    else
+    {
+        <div class="tl">
+            @foreach (var e in Model.Events)
+            {
+                <div class="n">
+                    <div class="t">@e.Ev.CteName</div>
+                    <div class="s">@e.Ev.EventTime.ToString("dd/MM/yyyy HH:mm")@(e.Ev.GlnName != null ? " · " + e.Ev.GlnName : "")@(e.Ev.Operator != null ? " · " + e.Ev.Operator : "")</div>
+                    @if (e.Kdes.Count > 0)
+                    {
+                        <div class="kde">@foreach (var k in e.Kdes) { <span>@k.Label: @k.Value@(k.Unit != null ? " " + k.Unit : "")</span> }</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    @if (Model.Parents.Count > 0)
+    {
+        <div style="margin-top:6px">
+            @foreach (var p in Model.Parents)
+            {
+                <div class="parent">@await Html.PartialAsync("_Node", p)</div>
+            }
+        </div>
+    }
+</div>

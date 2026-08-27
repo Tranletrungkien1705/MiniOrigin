@@ -1,0 +1,23 @@
+@model List<Lot>
+@{ ViewData["Title"] = "Lô sản xuất"; }
+<div class="card"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <form method="get" class="d-flex gap-2"><input name="q" value="@ViewBag.Q" class="form-control form-control-sm" placeholder="Mã lô / sản phẩm..." style="max-width:240px" /><button class="btn btn-sm btn-primary">Tìm</button></form>
+        <a href="/Lot/Create" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Tạo lô</a>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Mã lô</th><th>Sản phẩm</th><th class="text-end">SL</th><th>Nguồn gốc</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        @foreach (var l in Model)
+        {
+            var (t, css) = Ui.Lot(l.Status);
+            <tr style="cursor:pointer" onclick="location.href='/Lot/Detail/@l.Id'">
+                <td class="fw-semibold small">@l.Code</td><td>@l.ProductName</td>
+                <td class="text-end">@l.Quantity.ToString("N0") @l.Unit</td>
+                <td class="small text-muted">@(l.OriginGln?.Name ?? "—")</td><td><span class="badge bg-@css">@t</span></td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="5" class="text-center text-muted py-4">Chưa có lô.</td></tr> }
+        </tbody>
+    </table>
+</div></div>

@@ -1,0 +1,36 @@
+@{ ViewData["Title"] = "Bảng điều khiển"; var d = (OriginDash)ViewBag.Dash; }
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Lô sản xuất</div><div class="stat-num" style="color:#16a34a">@d.Lots</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Sự kiện truy xuất</div><div class="stat-num">@d.Events</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Loại sự kiện (CTE)</div><div class="stat-num">@d.Ctes</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Địa điểm (GLN)</div><div class="stat-num">@d.Glns</div></div></div></div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Lô gần đây</h6>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã lô</th><th>Sản phẩm</th><th>Nguồn gốc</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+            @foreach (var l in d.Recent)
+            {
+                var (t, css) = Ui.Lot(l.Status);
+                <tr style="cursor:pointer" onclick="location.href='/Lot/Detail/@l.Id'">
+                    <td class="fw-semibold small">@l.Code</td><td>@l.ProductName</td>
+                    <td class="small text-muted">@(l.OriginGln?.Name ?? "—")</td><td><span class="badge bg-@css">@t</span></td>
+                </tr>
+            }
+            @if (d.Recent.Count == 0) { <tr><td colspan="4" class="text-center text-muted py-4">Chưa có lô. <a href="/Lot/Create">Tạo lô →</a></td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-2">Tra cứu nhanh</h6>
+        <form action="/Trace" method="get" onsubmit="event.preventDefault(); var c=document.getElementById('tc').value.trim(); if(c) location.href='/Trace/'+encodeURIComponent(c);">
+            <div class="input-group"><input id="tc" class="form-control" placeholder="Nhập mã lô..." /><button class="btn btn-primary"><i class="bi bi-search"></i></button></div>
+        </form>
+        <div class="small text-muted mt-2">Thử: <code>GAO-ST25-2026-A</code></div>
+        <hr />
+        <a href="/Lot/Create" class="btn btn-outline-primary w-100 mb-2"><i class="bi bi-plus-lg me-1"></i>Tạo lô mới</a>
+        <a href="/Cte" class="btn btn-outline-primary w-100">Cấu hình CTE/KDE</a>
+    </div></div></div>
+</div>

@@ -1,0 +1,30 @@
+@model Cte
+@{ ViewData["Title"] = $"CTE {Model.Name}"; }
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <h5 class="fw-bold mb-1"><i class="bi @Model.Icon me-1"></i>@Model.Name <span class="text-muted small">@Model.Code</span></h5>
+        <h6 class="fw-bold mt-3 mb-2">Trường dữ liệu KDE</h6>
+        <table class="table table-sm align-middle">
+            <thead><tr><th>Nhãn</th><th>Key</th><th>Đơn vị</th><th class="text-center">Bắt buộc</th></tr></thead>
+            <tbody>
+            @foreach (var k in Model.Kdes.OrderBy(x => x.Ordinal))
+            {
+                <tr><td>@k.Label</td><td><code class="small">@k.Key</code></td><td class="small text-muted">@k.Unit</td>
+                    <td class="text-center">@if (k.Required) { <span class="badge bg-danger">Bắt buộc</span> } else { <span class="text-muted">—</span> }</td></tr>
+            }
+            @if (Model.Kdes.Count == 0) { <tr><td colspan="4" class="text-center text-muted py-3">Chưa có trường KDE.</td></tr> }
+            </tbody>
+        </table>
+        <a href="/Cte" class="btn btn-outline-secondary btn-sm">← Danh sách CTE</a>
+    </div></div></div>
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Thêm trường KDE</h6>
+        <form asp-action="AddKde" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" />
+            <div class="mb-2"><input name="label" class="form-control" placeholder="Nhãn (VD Nhiệt độ) *" required /></div>
+            <div class="mb-2"><input name="key" class="form-control" placeholder="Key (tự sinh từ nhãn)" /></div>
+            <div class="mb-2"><input name="unit" class="form-control" placeholder="Đơn vị (°C, kg...)" /></div>
+            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="required" value="true" id="req" /><label class="form-check-label small" for="req">Bắt buộc nhập</label></div>
+            <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Thêm trường</button>
+        </form>
+    </div></div></div>
+</div>
