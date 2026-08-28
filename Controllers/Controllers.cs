@@ -6,9 +6,15 @@ using MiniOrigin.Services;
 
 namespace MiniOrigin.Controllers;
 
-public class HomeController(IOriginService svc) : Controller
+public class HomeController : Controller
 {
-    public async Task<IActionResult> Index() { ViewBag.Dash = await svc.DashboardAsync(); return View(); }
+    // SPA React (admin) ở "/". Trang tra cứu công khai /Trace (Razor) giữ nguyên.
+    public IActionResult Index() => Redirect("/index.html");
+}
+
+public class LegacyController(IOriginService svc) : Controller
+{
+    public async Task<IActionResult> Index() { ViewBag.Dash = await svc.DashboardAsync(); return View("~/Views/Home/Index.cshtml"); }
 }
 
 public class CteController(IOriginService svc) : Controller
