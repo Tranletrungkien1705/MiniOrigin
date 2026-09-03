@@ -73,7 +73,77 @@ app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
     return Results.Ok(new { orgId = org.Id, apiKey = org.ApiKey });
 });
 
+// Import địa điểm GLN thật từ Mst_Dealer (dedupe theo Code)
+app.MapPost("/api/import/glns", async (List<ImportGlnDto> rows, AppDbContext db, ITenantContext tc) =>
+{
+    if (rows == null || rows.Count == 0) return Results.BadRequest(new { error = "Không có dữ liệu." });
+    int added = 0, skipped = 0;
+    var orgId = tc.OrgId;
+    var existCodes = db.Glns.Where(g => g.OrgId == orgId).Select(g => g.Code).ToHashSet();
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Code)) { skipped++; continue; }
+        if (existCodes.Contains(row.Code.Trim())) { skipped++; continue; }
+        db.Glns.Add(new Gln { OrgId = orgId, Code = row.Code.Trim(), Name = row.Name?.Trim() ?? row.Code.Trim(), Type = GlnType.Store, Address = row.Address });
+        existCodes.Add(row.Code.Trim()); added++;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { added, skipped, total = added + skipped });
+});
+
+// Import sản phẩm truy xuất từ Mst_CarModel (dedupe theo Code)
+app.MapPost("/api/import/products", async (List<ImportOriginProdDto> rows, AppDbContext db, ITenantContext tc) =>
+{
+    if (rows == null || rows.Count == 0) return Results.BadRequest(new { error = "Không có dữ liệu." });
+    int added = 0, skipped = 0;
+    var orgId = tc.OrgId;
+    var existCodes = db.Products.Where(p => p.OrgId == orgId).Select(p => p.Code).ToHashSet();
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Code)) { skipped++; continue; }
+        if (existCodes.Contains(row.Code.Trim())) { skipped++; continue; }
+        db.Products.Add(new Product { OrgId = orgId, Code = row.Code.Trim(), Name = row.Name?.Trim() ?? row.Code.Trim(), Unit = row.Unit });
+        existCodes.Add(row.Code.Trim()); added++;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { added, skipped, total = added + skipped });
+});
+
+// Import lô hàng thật từ Car_VIN (dedupe theo Code, lookup Product+GLN theo code)
+app.MapPost("/api/import/lots", async (List<ImportLotDto> rows, AppDbContext db, ITenantContext tc) =>
+{
+    if (rows == null || rows.Count == 0) return Results.BadRequest(new { error = "Không có dữ liệu." });
+    int added = 0, skipped = 0;
+    var orgId = tc.OrgId;
+    var existCodes = db.Lots.Where(l => l.OrgId == orgId).Select(l => l.Code).ToHashSet();
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Code)) { skipped++; continue; }
+        var code = row.Code.Trim();
+        if (existCodes.Contains(code)) { skipped++; continue; }
+        int? prodId = null; string prodName = row.ProductName ?? code;
+        if (!string.IsNullOrWhiteSpace(row.ProductCode))
+        {
+            var prod = db.Products.FirstOrDefault(p => p.OrgId == orgId && p.Code == row.ProductCode.Trim());
+            if (prod != null) { prodId = prod.Id; prodName = prod.Name; }
+        }
+        int? glnId = null;
+        if (!string.IsNullOrWhiteSpace(row.GlnCode))
+        {
+            var gln = db.Glns.FirstOrDefault(g => g.OrgId == orgId && g.Code == row.GlnCode.Trim());
+            glnId = gln?.Id;
+        }
+        db.Lots.Add(new Lot { OrgId = orgId, Code = code, ProductId = prodId, ProductName = prodName, OriginGlnId = glnId, Quantity = 1, Unit = "chiếc", Status = LotStatus.Shipped });
+        existCodes.Add(code); added++;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { added, skipped, total = added + skipped });
+});
+
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.Run();
 
 record RegisterOrgDto(string Name);
+record ImportGlnDto(string? Code, string? Name, string? Address);
+record ImportOriginProdDto(string? Code, string? Name, string? Unit);
+record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);
