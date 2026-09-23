@@ -40,6 +40,19 @@ public static class Seeder
                 new Brand { Code = "SANFI", Name = "Sanfi", Active = true });
             await db.SaveChangesAsync();
 
+            // Danh mục Màu sắc sản phẩm + gán màu — port từ Mst_PartColor / Mst_MapPartColor của InBrand.
+            var white = new ProductColor { Code = "TRANG-BONG", Name = "Glossy White", NameVn = "Trắng bóng", Active = true };
+            var grey = new ProductColor { Code = "XAM-MO", Name = "Matte Grey", NameVn = "Xám mờ", Active = true };
+            db.ProductColors.AddRange(white, grey); await db.SaveChangesAsync();
+
+            // Sản phẩm demo để gán màu (mỗi sản phẩm chỉ 1 màu mặc định).
+            var tile = new Product { Code = "GACH-GRANITE-60", Name = "Gạch Granite 60x60", Unit = "viên" };
+            db.Products.Add(tile); await db.SaveChangesAsync();
+            db.ProductColorMaps.AddRange(
+                new ProductColorMap { ProductId = tile.Id, ColorId = white.Id, IsDefault = true, Active = true },
+                new ProductColorMap { ProductId = tile.Id, ColorId = grey.Id, IsDefault = false, Active = true });
+            await db.SaveChangesAsync();
+
             // Đơn vị sản phẩm xác thực chính hãng — port từ Inv_InventoryBalanceSerial/Inv_InventorySecret.
             var viglacera = db.Brands.Local.First(b => b.Code == "VIGLACERA");
             db.ProductUnits.AddRange(
@@ -114,7 +127,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

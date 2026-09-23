@@ -72,6 +72,34 @@ public class Product : IOrgOwned
     public Brand? Brand { get; set; }
 }
 
+// Danh mục Màu sắc sản phẩm — port từ Mst_PartColor của InBrand.
+// Màu sắc là thuộc tính nguồn gốc thương hiệu của sản phẩm (VD Trắng bóng, Xám mờ).
+public class ProductColor : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // PartColorCode — mã màu (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // PartColorName — tên (EN)
+    public string NameVn { get; set; } = "";             // PartColorNameVN — tên tiếng Việt
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Gán màu cho sản phẩm — port từ Mst_MapPartColor của InBrand.
+// Luật: mỗi sản phẩm chỉ có TỐI ĐA 1 màu mặc định (FlagDefault).
+public class ProductColorMap : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int ProductId { get; set; }                    // PartCode — sản phẩm
+    public Product? Product { get; set; }
+    public int ColorId { get; set; }                      // PartColorCode — màu
+    public ProductColor? Color { get; set; }
+    public bool IsDefault { get; set; }                   // FlagDefault — màu mặc định của sản phẩm
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Lô sản xuất — đơn vị truy xuất
 public class Lot : IOrgOwned
 {

@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<KdeDef> Kdes => Set<KdeDef>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductColor> ProductColors => Set<ProductColor>();
+    public DbSet<ProductColorMap> ProductColorMaps => Set<ProductColorMap>();
     public DbSet<Lot> Lots => Set<Lot>();
     public DbSet<LotLink> LotLinks => Set<LotLink>();
     public DbSet<TraceEvent> Events => Set<TraceEvent>();
@@ -41,6 +43,14 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();
             e.HasOne(x => x.Brand).WithMany().HasForeignKey(x => x.BrandId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<ProductColor>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<ProductColorMap>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.ProductId, x.ColorId }).IsUnique();   // 1 cặp sản phẩm-màu chỉ gán 1 lần
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId);
+            e.HasOne(x => x.Color).WithMany().HasForeignKey(x => x.ColorId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
         b.Entity<Lot>(e =>

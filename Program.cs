@@ -21,6 +21,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
+builder.Services.AddScoped<IProductColorService, ProductColorService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
 builder.Services.AddScoped<IPackingService, PackingService>();
@@ -94,6 +95,58 @@ app.MapPut("/api/brands/{id:int}", async (int id, BrandReq r, IBrandService svc)
 app.MapDelete("/api/brands/{id:int}", async (int id, IBrandService svc) =>
 {
     var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Danh mục Màu sắc sản phẩm (nguồn gốc thương hiệu) — port từ Mst_PartColor của InBrand.
+app.MapGet("/api/colors", async (string? q, bool? active, IProductColorService svc) =>
+    Results.Ok((await svc.ListColorsAsync(q, active)).Select(v => new
+    {
+        v.Color.Id, v.Color.Code, v.Color.Name, v.Color.NameVn, v.Color.Active, v.ProductCount
+    })));
+
+app.MapPost("/api/colors", async (ColorReq r, IProductColorService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateColorAsync(r.Code ?? "", r.Name ?? "", r.NameVn ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/colors/{id:int}", async (int id, ColorReq r, IProductColorService svc) =>
+{
+    var (ok, msg) = await svc.UpdateColorAsync(id, r.Name ?? "", r.NameVn ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/colors/{id:int}", async (int id, IProductColorService svc) =>
+{
+    var (ok, msg) = await svc.DeleteColorAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Gán màu cho sản phẩm — port từ Mst_MapPartColor của InBrand.
+// Luật: mỗi sản phẩm chỉ có tối đa 1 màu mặc định.
+app.MapGet("/api/color-maps", async (int? productId, string? q, IProductColorService svc) =>
+    Results.Ok((await svc.ListMapsAsync(productId, q)).Select(v => new
+    {
+        v.Map.Id, v.Map.ProductId, productName = v.ProductName, v.Map.ColorId,
+        colorName = v.ColorName, colorNameVn = v.ColorNameVn, v.Map.IsDefault, v.Map.Active
+    })));
+
+app.MapPost("/api/color-maps", async (ColorMapReq r, IProductColorService svc) =>
+{
+    var (ok, msg, id) = await svc.AssignAsync(r.ProductId, r.ColorId, r.IsDefault);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/color-maps/{id:int}/default", async (int id, ColorMapDefaultReq r, IProductColorService svc) =>
+{
+    var (ok, msg) = await svc.SetMapDefaultAsync(id, r.IsDefault);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/color-maps/{id:int}", async (int id, IProductColorService svc) =>
+{
+    var (ok, msg) = await svc.RemoveMapAsync(id);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
@@ -357,6 +410,9 @@ app.Run();
 
 record RegisterOrgDto(string Name);
 record BrandReq(string? Code, string? Name, bool Active = true);
+record ColorReq(string? Code, string? Name, string? NameVn, bool Active = true);
+record ColorMapReq(int ProductId, int ColorId, bool IsDefault = false);
+record ColorMapDefaultReq(bool IsDefault);
 record VerifyReq(string? Serial, string? Pin);
 record ActivateReq(string? Serial, string? Pin, string? CustomerName, string? Phone, string? Address);
 record UnitReq(string? Serial, string? Pin, int? ProductId, int? BrandId, string? LotCode, string? Origin, int WarrantyMonths = 12);
