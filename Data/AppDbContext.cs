@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<KdeDef> Kdes => Set<KdeDef>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<WarrantyType> WarrantyTypes => Set<WarrantyType>();
+    public DbSet<MaterialType> MaterialTypes => Set<MaterialType>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductColor> ProductColors => Set<ProductColor>();
     public DbSet<ProductColorMap> ProductColorMaps => Set<ProductColorMap>();
@@ -44,11 +45,13 @@ public class AppDbContext : DbContext
         });
         b.Entity<Brand>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
         b.Entity<WarrantyType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<MaterialType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
         b.Entity<Product>(e =>
         {
             e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();
             e.HasOne(x => x.Brand).WithMany().HasForeignKey(x => x.BrandId);
             e.HasOne(x => x.WarrantyType).WithMany().HasForeignKey(x => x.WarrantyTypeId);
+            e.HasOne(x => x.MaterialType).WithMany().HasForeignKey(x => x.MaterialTypeId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
         b.Entity<ProductColor>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });

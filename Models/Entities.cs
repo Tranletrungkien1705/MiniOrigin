@@ -72,6 +72,8 @@ public class Product : IOrgOwned
     public Brand? Brand { get; set; }
     public int? WarrantyTypeId { get; set; }             // loại thời hạn bảo hành của sản phẩm
     public WarrantyType? WarrantyType { get; set; }
+    public int? MaterialTypeId { get; set; }             // nhóm vật liệu của sản phẩm
+    public MaterialType? MaterialType { get; set; }
 }
 
 // Loại thời hạn bảo hành (master) — port từ Mst_PartWarrantyType của InBrand.
@@ -84,6 +86,18 @@ public class WarrantyType : IOrgOwned
     public string Name { get; set; } = "";               // WarrantyName — tên hiển thị
     public bool Active { get; set; } = true;             // FlagActive
     public string? Remark { get; set; }                   // Remark — ghi chú
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Nhóm vật liệu (loại vật liệu) — port từ Mst_PartMaterialType của InBrand.
+// Phân nhóm sản phẩm theo vật liệu chế tác (VD Sứ vệ sinh, Sen vòi, Gạch lát nền).
+public class MaterialType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // PMType — mã nhóm vật liệu (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // PMTypeName — tên hiển thị
+    public bool Active { get; set; } = true;             // FlagActive
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

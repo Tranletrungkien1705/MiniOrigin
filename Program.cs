@@ -22,6 +22,7 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IWarrantyTypeService, WarrantyTypeService>();
+builder.Services.AddScoped<IMaterialTypeService, MaterialTypeService>();
 builder.Services.AddScoped<IProductColorService, ProductColorService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
@@ -129,6 +130,38 @@ app.MapDelete("/api/warranty-types/{id:int}", async (int id, IWarrantyTypeServic
 app.MapPost("/api/warranty-types/assign", async (WarrantyAssignReq r, IWarrantyTypeService svc) =>
 {
     var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.WarrantyTypeId);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Danh mục Nhóm vật liệu (loại vật liệu) — port từ Mst_PartMaterialType của InBrand.
+app.MapGet("/api/material-types", async (string? q, bool? active, IMaterialTypeService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Type.Id, v.Type.Code, v.Type.Name, v.Type.Active, v.ProductCount
+    })));
+
+app.MapPost("/api/material-types", async (MaterialTypeReq r, IMaterialTypeService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/material-types/{id:int}", async (int id, MaterialTypeReq r, IMaterialTypeService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/material-types/{id:int}", async (int id, IMaterialTypeService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Gán nhóm vật liệu cho sản phẩm — port từ MstPart.PMType của InBrand.
+app.MapPost("/api/material-types/assign", async (MaterialTypeAssignReq r, IMaterialTypeService svc) =>
+{
+    var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.MaterialTypeId);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
@@ -525,6 +558,8 @@ record RegisterOrgDto(string Name);
 record BrandReq(string? Code, string? Name, bool Active = true);
 record WarrantyTypeReq(string? Code, string? Name, string? Remark, bool Active = true);
 record WarrantyAssignReq(int ProductId, int? WarrantyTypeId);
+record MaterialTypeReq(string? Code, string? Name, bool Active = true);
+record MaterialTypeAssignReq(int ProductId, int? MaterialTypeId);
 record ColorReq(string? Code, string? Name, string? NameVn, bool Active = true);
 record ColorMapReq(int ProductId, int ColorId, bool IsDefault = false);
 record ColorMapDefaultReq(bool IsDefault);
