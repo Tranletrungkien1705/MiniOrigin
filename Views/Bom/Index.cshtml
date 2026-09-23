@@ -1,0 +1,134 @@
+@model List<BomView>
+@{
+    ViewData["Title"] = "Định mức nguyên vật liệu (BOM)";
+    var q = (string?)ViewBag.Q;
+    var status = (BomStatus?)ViewBag.Status;
+    var types = (List<BomTypeView>)ViewBag.Types;
+    var products = (List<Product>)ViewBag.Products;
+    string Badge(BomStatus s) => s switch
+    {
+        BomStatus.Pending => "bg-warning text-dark",
+        BomStatus.Approve => "bg-success",
+        _ => "bg-secondary"
+    };
+    string Label(BomStatus s) => s switch
+    {
+        BomStatus.Pending => "Chờ duyệt",
+        BomStatus.Approve => "Đã duyệt",
+        _ => "Hoàn tất"
+    };
+}
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <p class="text-muted small">Định mức nguyên vật liệu (Bill of Materials) — gắn 1 sản phẩm cha với các thành phần. Vòng đời: Chờ duyệt → Đã duyệt → Hoàn tất. Port từ Mst_BOM / Mst_BOMDtl của InBrand.</p>
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-sm-6"><input name="q" value="@q" class="form-control form-control-sm" placeholder="Tìm mã BOM / tên sản phẩm cha" /></div>
+            <div class="col-sm-3"><select name="status" class="form-select form-select-sm">
+                <option value="">Tất cả trạng thái</option>
+                <option value="0" selected="@(status == BomStatus.Pending)">Chờ duyệt</option>
+                <option value="1" selected="@(status == BomStatus.Approve)">Đã duyệt</option>
+                <option value="2" selected="@(status == BomStatus.Finish)">Hoàn tất</option>
+            </select></div>
+            <div class="col-sm-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Lọc</button></div>
+        </form>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã BOM</th><th>Sản phẩm cha</th><th>Loại</th><th class="text-center">Thành phần</th><th>Mặc định</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var v in Model)
+            {
+                <tr>
+                    <td class="fw-semibold small"><a href="/Bom/Detail/@v.Bom.Id"><code>@v.Bom.Code</code></a></td>
+                    <td>@v.ParentProductName</td>
+                    <td class="small"><code>@v.BomTypeCode</code></td>
+                    <td class="text-center">@v.LineCount</td>
+                    <td>@if (v.Bom.IsDefault) { <span class="badge bg-primary">Mặc định</span> } else { <span class="text-muted small">—</span> }</td>
+                    <td><span class="badge @Badge(v.Bom.Status)">@Label(v.Bom.Status)</span></td>
+                    <td class="text-end">
+                        <a href="/Bom/Detail/@v.Bom.Id" class="btn btn-sm btn-outline-secondary" title="Chi tiết"><i class="bi bi-eye"></i></a>
+                        @if (v.Bom.Status == BomStatus.Pending)
+                        {
+                            <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Xoá BOM @v.Bom.Code?');">@Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@v.Bom.Id" />
+                                <button class="btn btn-sm btn-outline-danger" title="Xoá"><i class="bi bi-trash"></i></button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">Chưa có BOM.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4">
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thêm BOM</h6>
+            <form asp-action="Create" method="post">@Html.AntiForgeryToken()
+                <div class="mb-2"><input name="code" class="form-control text-uppercase" placeholder="Mã BOM (VD BOM-GACH-01) *" required /></div>
+                <div class="mb-2"><select name="parentProductId" class="form-select form-select-sm" required>
+                    <option value="">— Sản phẩm cha —</option>
+                    @foreach (var p in products) { <option value="@p.Id">@p.Code — @p.Name</option> }
+                </select></div>
+                <div class="mb-2"><select name="bomTypeId" class="form-select form-select-sm" required>
+                    <option value="">— Loại BOM —</option>
+                    @foreach (var t in types.Where(x => x.Type.Active)) { <option value="@t.Type.Id">@t.Type.Code — @(t.Type.Description ?? "")</option> }
+                </select></div>
+                <div class="mb-2"><input name="remark" class="form-control form-control-sm" placeholder="Ghi chú" /></div>
+                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="isDefault" value="true" id="bomDefault" /><label class="form-check-label" for="bomDefault">BOM mặc định của sản phẩm cha</label></div>
+                <label class="form-label small fw-semibold mb-1">Thành phần (ít nhất 1 dòng)</label>
+                <div id="bomLines">
+                    <div class="row g-1 mb-1 bom-line">
+                        <div class="col-6"><select name="componentProductId" class="form-select form-select-sm">
+                            <option value="">— Thành phần —</option>
+                            @foreach (var p in products) { <option value="@p.Id">@p.Code</option> }
+                        </select></div>
+                        <div class="col-3"><input name="qty" type="number" step="0.001" min="0" class="form-control form-control-sm" placeholder="SL" /></div>
+                        <div class="col-3"><input name="unit" class="form-control form-control-sm" placeholder="ĐVT" /></div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addBomLine()"><i class="bi bi-plus"></i> Thêm dòng</button>
+                <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Tạo BOM</button>
+            </form>
+            <div class="small text-muted mt-3">Thành phần không được là chính sản phẩm cha và không tạo chu trình (A→B, B→A). Mỗi sản phẩm cha chỉ có tối đa 1 BOM mặc định đã duyệt.</div>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <h6 class="fw-bold mb-3">Loại BOM</h6>
+            <table class="table table-sm align-middle mb-2">
+                <tbody>
+                @foreach (var t in types)
+                {
+                    <tr>
+                        <td class="small"><code>@t.Type.Code</code></td>
+                        <td class="small text-muted">@(t.Type.Description ?? "—")</td>
+                        <td class="text-center small">@t.BomCount</td>
+                        <td>@if (t.Type.Active) { <span class="badge bg-success">ON</span> } else { <span class="badge bg-secondary">OFF</span> }</td>
+                        <td class="text-end">
+                            <form asp-action="DeleteType" method="post" class="d-inline" onsubmit="return confirm('Xoá loại BOM @t.Type.Code?');">@Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@t.Type.Id" />
+                                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Xoá"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (types.Count == 0) { <tr><td colspan="5" class="text-center text-muted small py-3">Chưa có loại BOM.</td></tr> }
+                </tbody>
+            </table>
+            <form asp-action="CreateType" method="post" class="row g-1">@Html.AntiForgeryToken()
+                <div class="col-5"><input name="code" class="form-control form-control-sm text-uppercase" placeholder="Mã loại *" required /></div>
+                <div class="col-5"><input name="description" class="form-control form-control-sm" placeholder="Mô tả" /></div>
+                <div class="col-2"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button></div>
+            </form>
+        </div></div>
+    </div>
+</div>
+@section Scripts {
+<script>
+    function addBomLine() {
+        var box = document.getElementById('bomLines');
+        var first = box.querySelector('.bom-line');
+        var clone = first.cloneNode(true);
+        clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+        clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+        box.appendChild(clone);
+    }
+</script>
+}

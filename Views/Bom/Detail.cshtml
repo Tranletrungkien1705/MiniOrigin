@@ -1,0 +1,97 @@
+@model BomDetail
+@{
+    ViewData["Title"] = "BOM " + Model.Bom.Code;
+    var b = Model.Bom;
+    string Badge(BomStatus s) => s switch
+    {
+        BomStatus.Pending => "bg-warning text-dark",
+        BomStatus.Approve => "bg-success",
+        _ => "bg-secondary"
+    };
+    string Label(BomStatus s) => s switch
+    {
+        BomStatus.Pending => "Chờ duyệt",
+        BomStatus.Approve => "Đã duyệt",
+        _ => "Hoàn tất"
+    };
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/Bom" class="text-decoration-none small"><i class="bi bi-arrow-left me-1"></i>Danh sách BOM</a>
+    <div>
+        @if (b.Status == BomStatus.Pending)
+        {
+            <form asp-action="Approve" method="post" class="d-inline">@Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@b.Id" />
+                <button class="btn btn-sm btn-success"><i class="bi bi-check2-circle me-1"></i>Duyệt</button>
+            </form>
+        }
+        @if (b.Status == BomStatus.Approve)
+        {
+            <form asp-action="Finish" method="post" class="d-inline">@Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@b.Id" />
+                <button class="btn btn-sm btn-secondary"><i class="bi bi-flag me-1"></i>Hoàn tất</button>
+            </form>
+        }
+    </div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3"><div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="fw-bold mb-1"><code>@b.Code</code></h5>
+                    <div class="text-muted small">Sản phẩm cha: <strong>@Model.ParentProductName</strong> · Loại: <code>@Model.BomTypeCode</code></div>
+                </div>
+                <div class="text-end">
+                    <span class="badge @Badge(b.Status)">@Label(b.Status)</span>
+                    @if (b.IsDefault) { <span class="badge bg-primary ms-1">Mặc định</span> }
+                </div>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(b.Remark)) { <div class="mt-2 small text-muted"><i class="bi bi-chat-left-text me-1"></i>@b.Remark</div> }
+        </div></div>
+        <div class="card"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thành phần (@Model.Lines.Count)</h6>
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Mã</th><th>Tên thành phần</th><th class="text-end">Số lượng</th><th>ĐVT</th><th class="text-end">Chi phí</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var l in Model.Lines)
+                {
+                    <tr>
+                        <td class="small"><code>@l.ComponentCode</code></td>
+                        <td>@l.ComponentName</td>
+                        <td class="text-end">@l.Line.Qty.ToString("0.###")</td>
+                        <td class="small text-muted">@(l.Line.Unit ?? "—")</td>
+                        <td class="text-end small">@l.Line.ValCost.ToString("0.##")</td>
+                        <td><span class="badge @Badge(l.Line.Status)">@Label(l.Line.Status)</span></td>
+                    </tr>
+                }
+                @if (Model.Lines.Count == 0) { <tr><td colspan="6" class="text-center text-muted py-4">BOM chưa có thành phần.</td></tr> }
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thông tin</h6>
+            <dl class="row small mb-0">
+                <dt class="col-5 text-muted">Trạng thái</dt><dd class="col-7">@Label(b.Status)</dd>
+                <dt class="col-5 text-muted">Mặc định</dt><dd class="col-7">@(b.IsDefault ? "Có" : "Không")</dd>
+                <dt class="col-5 text-muted">Ngày tạo</dt><dd class="col-7">@b.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                <dt class="col-5 text-muted">Ngày duyệt</dt><dd class="col-7">@(b.ApproveDTime?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</dd>
+                <dt class="col-5 text-muted">Ngày hoàn tất</dt><dd class="col-7">@(b.FinishDTime?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</dd>
+            </dl>
+        </div></div>
+        @if (b.Status == BomStatus.Pending)
+        {
+            <div class="card"><div class="card-body">
+                <h6 class="fw-bold mb-3">Cập nhật (chỉ khi Chờ duyệt)</h6>
+                <form asp-action="Update" method="post">@Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@b.Id" />
+                    <div class="mb-2"><input name="remark" value="@b.Remark" class="form-control form-control-sm" placeholder="Ghi chú" /></div>
+                    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="isDefault" value="true" id="updDefault" checked="@b.IsDefault" /><label class="form-check-label" for="updDefault">BOM mặc định</label></div>
+                    <button class="btn btn-outline-primary w-100"><i class="bi bi-save me-1"></i>Lưu</button>
+                </form>
+            </div></div>
+        }
+    </div>
+</div>

@@ -27,6 +27,7 @@ builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
 builder.Services.AddScoped<IPackingService, PackingService>();
 builder.Services.AddScoped<ISearchLogService, SearchLogService>();
+builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -357,6 +358,85 @@ app.MapGet("/api/search-logs", async (string? q, SearchType? type, ISearchLogSer
 
 app.MapGet("/api/search-logs/stats", async (ISearchLogService svc) => Results.Ok(await svc.StatsAsync()));
 
+// Định mức nguyên vật liệu (Bill of Materials) — port từ Mst_BOM / Mst_BOMDtl / Mst_BOMType của InBrand.
+// Loại BOM (Mst_BOMType).
+app.MapGet("/api/bom-types", async (string? q, bool? active, IBomService svc) =>
+    Results.Ok((await svc.ListTypesAsync(q, active)).Select(v => new
+    {
+        v.Type.Id, v.Type.Code, v.Type.Description, v.Type.Active, v.BomCount
+    })));
+
+app.MapPost("/api/bom-types", async (BomTypeReq r, IBomService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateTypeAsync(r.Code ?? "", r.Description, r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/bom-types/{id:int}", async (int id, BomTypeReq r, IBomService svc) =>
+{
+    var (ok, msg) = await svc.UpdateTypeAsync(id, r.Description, r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/bom-types/{id:int}", async (int id, IBomService svc) =>
+{
+    var (ok, msg) = await svc.DeleteTypeAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// BOM (Mst_BOM + Mst_BOMDtl).
+app.MapGet("/api/boms", async (string? q, BomStatus? status, IBomService svc) =>
+    Results.Ok((await svc.ListAsync(q, status)).Select(v => new
+    {
+        v.Bom.Id, v.Bom.Code, v.Bom.ParentProductId, parentProductName = v.ParentProductName,
+        v.Bom.BomTypeId, bomTypeCode = v.BomTypeCode, v.Bom.IsDefault, status = v.Bom.Status.ToString(),
+        v.LineCount, v.Bom.Remark, v.Bom.CreatedAt
+    })));
+
+app.MapGet("/api/boms/{id:int}", async (int id, IBomService svc) =>
+{
+    var d = await svc.GetAsync(id);
+    if (d == null) return Results.NotFound(new { error = "Không tìm thấy BOM." });
+    return Results.Ok(new
+    {
+        d.Bom.Id, d.Bom.Code, d.Bom.ParentProductId, parentProductName = d.ParentProductName,
+        d.Bom.BomTypeId, bomTypeCode = d.BomTypeCode, d.Bom.IsDefault, status = d.Bom.Status.ToString(),
+        d.Bom.Remark, d.Bom.ApproveDTime, d.Bom.FinishDTime,
+        lines = d.Lines.Select(l => new { l.Line.Id, l.Line.ComponentProductId, componentCode = l.ComponentCode, componentName = l.ComponentName, l.Line.Qty, l.Line.Unit, l.Line.ValCost, status = l.Line.Status.ToString() })
+    });
+});
+
+app.MapPost("/api/boms", async (BomReq r, IBomService svc) =>
+{
+    var lines = (r.Lines ?? new()).Select(l => new BomLineInput(l.ComponentProductId, l.Qty, l.Unit)).ToList();
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.ParentProductId, r.BomTypeId, r.IsDefault, r.Remark, lines);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/boms/{id:int}", async (int id, BomUpdateReq r, IBomService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.IsDefault, r.Remark);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/boms/{id:int}/approve", async (int id, IBomService svc) =>
+{
+    var (ok, msg) = await svc.ApproveAsync(id);
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/boms/{id:int}/finish", async (int id, IBomService svc) =>
+{
+    var (ok, msg) = await svc.FinishAsync(id);
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/boms/{id:int}", async (int id, IBomService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
 app.MapPost("/api/search-logs", async (SearchLogReq r, ISearchLogService svc) =>
 {
     var log = await svc.RecordAsync(r.SearchCode ?? "", r.Type, r.Found, r.UserCode, r.VisitId);
@@ -461,3 +541,7 @@ record ImportGlnDto(string? Code, string? Name, string? Address);
 record ImportOriginProdDto(string? Code, string? Name, string? Unit);
 record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);
 record SearchLogReq(string? SearchCode, SearchType Type, bool Found, string? UserCode, string? VisitId);
+record BomTypeReq(string? Code, string? Description, bool Active = true);
+record BomLineReq(int ComponentProductId, decimal Qty, string? Unit);
+record BomReq(string? Code, int ParentProductId, int BomTypeId, bool IsDefault, string? Remark, List<BomLineReq>? Lines);
+record BomUpdateReq(bool IsDefault, string? Remark);

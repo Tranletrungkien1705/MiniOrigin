@@ -118,6 +118,26 @@ public static class Seeder
                 new SearchLog { SearchCode = "BOX-VGC-0001", Type = SearchType.Box, Found = true, UserCode = "khach-hcm", VisitId = "VISIT-DEMO-01", SearchDTime = DateTime.UtcNow.AddHours(-1) },
                 new SearchLog { SearchCode = "VGC-9999-0000", Type = SearchType.Authenticity, Found = false, UserCode = "khach-dn", VisitId = "VISIT-DEMO-03", SearchDTime = DateTime.UtcNow.AddMinutes(-30) });
             await db.SaveChangesAsync();
+
+            // Định mức nguyên vật liệu (BOM) demo — port từ Mst_BOM / Mst_BOMDtl / Mst_BOMType của InBrand.
+            var bomType = new BomType { Code = "SANXUAT", Description = "BOM sản xuất", Active = true };
+            db.BomTypes.Add(bomType); await db.SaveChangesAsync();
+
+            var body = new Product { Code = "THAN-GACH-60", Name = "Thân gạch Granite 60x60", Unit = "viên" };
+            var glaze = new Product { Code = "MEN-BONG", Name = "Men bóng", Unit = "kg" };
+            db.Products.AddRange(body, glaze); await db.SaveChangesAsync();
+
+            var bom = new Bom
+            {
+                Code = "BOM-GACH-60-01", ParentProductId = tile.Id, BomTypeId = bomType.Id,
+                IsDefault = true, Status = BomStatus.Approve, Remark = "Định mức gạch Granite 60x60",
+                ApproveDTime = DateTime.UtcNow
+            };
+            db.Boms.Add(bom); await db.SaveChangesAsync();
+            db.BomLines.AddRange(
+                new BomLine { BomId = bom.Id, ComponentProductId = body.Id, Qty = 1, Unit = "viên", ValCost = 0, Status = BomStatus.Approve },
+                new BomLine { BomId = bom.Id, ComponentProductId = glaze.Id, Qty = 0.35m, Unit = "kg", ValCost = 0, Status = BomStatus.Approve });
+            await db.SaveChangesAsync();
         }
     }
 
@@ -133,7 +153,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

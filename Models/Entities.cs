@@ -272,6 +272,62 @@ public class SearchLog : IOrgOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Loại BOM (Bill of Materials) — port từ Mst_BOMType của InBrand.
+// Phân loại cấu trúc định mức nguyên vật liệu (VD: BOM sản xuất, BOM đóng gói).
+public class BomType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // BOMType — mã loại (duy nhất theo tenant)
+    public string? Description { get; set; }              // BOMTypeDesc — mô tả
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Trạng thái BOM — port từ TConst.BOMStatus của InBrand (PENDING → APPROVE → FINISH).
+public enum BomStatus { Pending = 0, Approve = 1, Finish = 2 }
+
+// Định mức nguyên vật liệu (Bill of Materials) — port từ Mst_BOM của InBrand.
+// Một BOM gắn 1 sản phẩm cha (PartCodeParent) với 1 loại BOM, gồm nhiều dòng thành phần.
+// Vòng đời: PENDING (tạo/sửa/xoá) → APPROVE (duyệt) → FINISH (hoàn tất).
+public class Bom : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // BOMCode — mã BOM (duy nhất theo tenant)
+    public int ParentProductId { get; set; }              // PartCodeParent — sản phẩm cha
+    public Product? ParentProduct { get; set; }
+    public int BomTypeId { get; set; }                    // BOMType — loại BOM
+    public BomType? BomType { get; set; }
+    public bool IsDefault { get; set; }                   // FlagDefault — BOM mặc định của sản phẩm cha
+    public BomStatus Status { get; set; } = BomStatus.Pending;
+    public string? Remark { get; set; }
+    public DateTime? ApproveDTime { get; set; }           // ApprDTime
+    public string? ApproveBy { get; set; }                // ApprBy
+    public DateTime? FinishDTime { get; set; }            // FinishDTime
+    public string? FinishBy { get; set; }                 // FinishBy
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public List<BomLine> Lines { get; set; } = new();
+}
+
+// Dòng thành phần của BOM — port từ Mst_BOMDtl của InBrand.
+// Mỗi dòng: 1 sản phẩm thành phần (PartCode) + số lượng (Qty) + đơn vị tính (PartUnitCode).
+public class BomLine : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int BomId { get; set; }
+    public Bom? Bom { get; set; }
+    public int ComponentProductId { get; set; }           // PartCode — sản phẩm thành phần
+    public Product? ComponentProduct { get; set; }
+    public decimal Qty { get; set; }                      // Qty — số lượng (>= 0)
+    public string? Unit { get; set; }                     // PartUnitCode — đơn vị tính
+    public decimal ValCost { get; set; }                  // ValCost — giá trị chi phí (mặc định 0)
+    public BomStatus Status { get; set; } = BomStatus.Pending;   // BOMStatusDtl
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

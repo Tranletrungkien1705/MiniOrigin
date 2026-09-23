@@ -27,6 +27,9 @@ public class AppDbContext : DbContext
     public DbSet<Can> Cans => Set<Can>();
     public DbSet<BoxItem> BoxItems => Set<BoxItem>();
     public DbSet<SearchLog> SearchLogs => Set<SearchLog>();
+    public DbSet<BomType> BomTypes => Set<BomType>();
+    public DbSet<Bom> Boms => Set<Bom>();
+    public DbSet<BomLine> BomLines => Set<BomLine>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -115,6 +118,23 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => new { x.OrgId, x.SearchCode });            // tra cứu nhanh theo mã
             e.HasIndex(x => x.SearchDTime);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<BomType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<Bom>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã BOM duy nhất theo tenant
+            e.HasOne(x => x.ParentProduct).WithMany().HasForeignKey(x => x.ParentProductId);
+            e.HasOne(x => x.BomType).WithMany().HasForeignKey(x => x.BomTypeId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<BomLine>(e =>
+        {
+            e.HasIndex(x => new { x.BomId, x.ComponentProductId }).IsUnique();   // 1 thành phần chỉ xuất hiện 1 lần trong 1 BOM
+            e.Property(x => x.Qty).HasPrecision(18, 3);
+            e.Property(x => x.ValCost).HasPrecision(18, 3);
+            e.HasOne(x => x.Bom).WithMany(x => x.Lines).HasForeignKey(x => x.BomId);
+            e.HasOne(x => x.ComponentProduct).WithMany().HasForeignKey(x => x.ComponentProductId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }

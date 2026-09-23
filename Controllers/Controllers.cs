@@ -370,6 +370,90 @@ public class SearchLogController(ISearchLogService svc) : Controller
     }
 }
 
+public class BomController(IBomService svc, IOriginService origin) : Controller
+{
+    // Định mức nguyên vật liệu (Bill of Materials) — port từ Mst_BOM / Mst_BOMDtl / Mst_BOMType của InBrand.
+    public async Task<IActionResult> Index(string? q, BomStatus? status)
+    {
+        ViewBag.Q = q; ViewBag.Status = status;
+        ViewBag.Types = await svc.ListTypesAsync(null, null);
+        ViewBag.Products = await origin.ProductsAsync();
+        return View(await svc.ListAsync(q, status));
+    }
+
+    public async Task<IActionResult> Detail(int id)
+    {
+        var d = await svc.GetAsync(id);
+        return d == null ? NotFound() : View(d);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, int parentProductId, int bomTypeId, bool isDefault, string? remark,
+        int[]? componentProductId, decimal[]? qty, string[]? unit)
+    {
+        var lines = new List<BomLineInput>();
+        if (componentProductId != null)
+            for (int i = 0; i < componentProductId.Length; i++)
+            {
+                if (componentProductId[i] <= 0) continue;
+                var q = (qty != null && i < qty.Length) ? qty[i] : 0;
+                var u = (unit != null && i < unit.Length) ? unit[i] : null;
+                lines.Add(new BomLineInput(componentProductId[i], q, u));
+            }
+        var (ok, msg, id) = await svc.CreateAsync(code, parentProductId, bomTypeId, isDefault, remark, lines);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return ok ? RedirectToAction(nameof(Detail), new { id }) : RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, bool isDefault, string? remark)
+    {
+        var (ok, msg) = await svc.UpdateAsync(id, isDefault, remark);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Approve(int id)
+    {
+        var (ok, msg) = await svc.ApproveAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Finish(int id)
+    {
+        var (ok, msg) = await svc.FinishAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var (ok, msg) = await svc.DeleteAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateType(string code, string? description, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateTypeAsync(code, description, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteType(int id)
+    {
+        var (ok, msg) = await svc.DeleteTypeAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+}
+
 public class OrgController(AppDbContext db) : Controller{
     public async Task<IActionResult> Index()
     {
