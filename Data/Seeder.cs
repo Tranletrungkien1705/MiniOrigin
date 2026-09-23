@@ -34,6 +34,12 @@ public static class Seeder
             var wh = new Gln { Code = "8930000000003", Name = "Kho phân phối HCM", Type = GlnType.Warehouse, Address = "TP.HCM" };
             db.Glns.AddRange(farm, factory, wh); await db.SaveChangesAsync();
 
+            // Danh mục thương hiệu (nguồn gốc thương hiệu) — port từ Mst_Brand của InBrand.
+            db.Brands.AddRange(
+                new Brand { Code = "VIGLACERA", Name = "Viglacera", Active = true },
+                new Brand { Code = "SANFI", Name = "Sanfi", Active = true });
+            await db.SaveChangesAsync();
+
             // Lô nguyên liệu: lúa tươi từ trang trại
             var raw = new Lot { Code = "LUA-DT-2026-001", ProductName = "Lúa tươi ST25", Unit = "kg", Quantity = 5000, OriginGlnId = farm.Id, Status = LotStatus.Shipped };
             db.Lots.Add(raw); await db.SaveChangesAsync();
@@ -66,7 +72,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Products", "Lots", "LotLinks", "Events" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

@@ -28,7 +28,10 @@ public class BrandService(AppDbContext db) : IBrandService
     {
         var query = db.Brands.AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
-            query = query.Where(b => b.Code.Contains(q) || b.Name.Contains(q));
+        {
+            var term = q.Trim().ToLower();
+            query = query.Where(b => b.Code.ToLower().Contains(term) || b.Name.ToLower().Contains(term));
+        }
         if (activeOnly == true) query = query.Where(b => b.Active);
 
         var brands = await query.OrderBy(b => b.Name).ToListAsync();
