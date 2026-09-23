@@ -24,6 +24,7 @@ builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
 builder.Services.AddScoped<IPackingService, PackingService>();
+builder.Services.AddScoped<ISearchLogService, SearchLogService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -57,9 +58,10 @@ app.MapGet("/api/summary", async (IOriginService svc) =>
 });
 
 // Tra cứu nguồn gốc công khai theo mã lô (xuyên tenant).
-app.MapGet("/api/trace/{code}", async (string code, IOriginService svc) =>
+app.MapGet("/api/trace/{code}", async (string code, IOriginService svc, ISearchLogService logs) =>
 {
     var t = await svc.TraceByCodeAsync(code);
+    await logs.RecordAsync(code, SearchType.Trace, t != null);
     if (t == null) return Results.NotFound(new { error = "Không tìm thấy mã lô." });
     object Map(LotTrace x) => new
     {
@@ -97,9 +99,10 @@ app.MapDelete("/api/brands/{id:int}", async (int id, IBrandService svc) =>
 
 // Xác thực sản phẩm chính hãng (nguồn gốc thương hiệu) — port từ module BrandPositioning của InBrand.
 // Tra cứu công khai theo serial (không lộ mã bí mật).
-app.MapGet("/api/authenticity/{serial}", async (string serial, IAuthenticityService svc) =>
+app.MapGet("/api/authenticity/{serial}", async (string serial, IAuthenticityService svc, ISearchLogService logs) =>
 {
     var u = await svc.LookupAsync(serial);
+    await logs.RecordAsync(serial, SearchType.Authenticity, u != null);
     return u == null ? Results.NotFound(new { error = "Không tìm thấy sản phẩm." }) : Results.Ok(u);
 });
 
@@ -182,9 +185,10 @@ app.MapPost("/api/verify-batches/{id:int}/cancel", async (int id, IVerifyBatchSe
 
 // Đóng hộp / Đóng thùng (packing) — port từ module Box/Can của InBrand.
 // Tra cứu công khai theo mã hộp: trả về danh sách serial bên trong.
-app.MapGet("/api/boxes/lookup/{code}", async (string code, IPackingService svc) =>
+app.MapGet("/api/boxes/lookup/{code}", async (string code, IPackingService svc, ISearchLogService logs) =>
 {
     var b = await svc.LookupBoxAsync(code);
+    await logs.RecordAsync(code, SearchType.Box, b != null);
     return b == null ? Results.NotFound(new { error = "Không tìm thấy mã hộp." }) : Results.Ok(b);
 });
 
@@ -256,6 +260,21 @@ app.MapPost("/api/cans/{id:int}/unpack", async (int id, PackBoxReq r, IPackingSe
 {
     var (ok, msg) = await svc.UnpackBoxAsync(id, r.BoxCode ?? "");
     return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+// Lịch sử tra cứu — port từ Rpt_SearchHis của InBrand.
+app.MapGet("/api/search-logs", async (string? q, SearchType? type, ISearchLogService svc) =>
+    Results.Ok((await svc.ListAsync(q, type)).Select(x => new
+    {
+        x.Id, x.SearchCode, x.UserCode, type = x.Type.ToString(), x.Found, x.VisitId, x.SearchDTime
+    })));
+
+app.MapGet("/api/search-logs/stats", async (ISearchLogService svc) => Results.Ok(await svc.StatsAsync()));
+
+app.MapPost("/api/search-logs", async (SearchLogReq r, ISearchLogService svc) =>
+{
+    var log = await svc.RecordAsync(r.SearchCode ?? "", r.Type, r.Found, r.UserCode, r.VisitId);
+    return Results.Ok(new { log.Id });
 });
 
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
@@ -350,3 +369,4 @@ record PackBoxReq(string? BoxCode);
 record ImportGlnDto(string? Code, string? Name, string? Address);
 record ImportOriginProdDto(string? Code, string? Name, string? Unit);
 record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);
+record SearchLogReq(string? SearchCode, SearchType Type, bool Found, string? UserCode, string? VisitId);

@@ -308,8 +308,18 @@ public class PackingController(IPackingService svc) : Controller
     }
 }
 
-public class OrgController(AppDbContext db) : Controller
+public class SearchLogController(ISearchLogService svc) : Controller
 {
+    // Lịch sử tra cứu — port từ Rpt_SearchHis của InBrand.
+    public async Task<IActionResult> Index(string? q, SearchType? type)
+    {
+        ViewBag.Q = q; ViewBag.Type = type;
+        ViewBag.Stats = await svc.StatsAsync();
+        return View(await svc.ListAsync(q, type));
+    }
+}
+
+public class OrgController(AppDbContext db) : Controller{
     public async Task<IActionResult> Index()
     {
         Request.Cookies.TryGetValue(TenantContext.CookieName, out var curKey);

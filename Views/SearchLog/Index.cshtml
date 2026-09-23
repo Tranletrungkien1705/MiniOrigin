@@ -1,0 +1,56 @@
+@model List<SearchLog>
+@{
+    ViewData["Title"] = "Lịch sử tra cứu";
+    var q = (string?)ViewBag.Q;
+    var type = (SearchType?)ViewBag.Type;
+    var stats = (SearchLogStats)ViewBag.Stats;
+    string TypeLabel(SearchType t) => t switch
+    {
+        SearchType.Authenticity => "Xác thực",
+        SearchType.Trace => "Nguồn gốc",
+        SearchType.Box => "Hộp",
+        _ => t.ToString()
+    };
+}
+<div class="row g-3 mb-1">
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body py-3">
+        <div class="text-muted small">Tổng lượt tra cứu</div><div class="stat-num">@stats.Total</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body py-3">
+        <div class="text-muted small">Xác thực chính hãng</div><div class="stat-num text-success">@stats.Authenticity</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body py-3">
+        <div class="text-muted small">Tra cứu nguồn gốc</div><div class="stat-num">@stats.Trace</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body py-3">
+        <div class="text-muted small">Không tìm thấy</div><div class="stat-num text-danger">@stats.NotFound</div></div></div></div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-12"><div class="card"><div class="card-body">
+        <p class="text-muted small">Lịch sử tra cứu — ghi lại mỗi lượt tra cứu mã (serial xác thực / mã lô / mã hộp). Port từ Rpt_SearchHis của InBrand.</p>
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-sm-6"><input name="q" value="@q" class="form-control form-control-sm" placeholder="Tìm mã tra cứu / người tra cứu" /></div>
+            <div class="col-sm-3"><select name="type" class="form-select form-select-sm">
+                <option value="">Tất cả loại</option>
+                <option value="Authenticity" selected="@(type == SearchType.Authenticity)">Xác thực</option>
+                <option value="Trace" selected="@(type == SearchType.Trace)">Nguồn gốc</option>
+                <option value="Box" selected="@(type == SearchType.Box)">Hộp</option>
+            </select></div>
+            <div class="col-sm-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Lọc</button></div>
+        </form>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã tra cứu</th><th>Loại</th><th>Người tra cứu</th><th>Kết quả</th><th>Phiên</th><th>Thời điểm</th></tr></thead>
+            <tbody>
+            @foreach (var x in Model)
+            {
+                <tr>
+                    <td class="fw-semibold small"><code>@x.SearchCode</code></td>
+                    <td><span class="badge bg-light text-dark border">@TypeLabel(x.Type)</span></td>
+                    <td class="small">@(x.UserCode ?? "—")</td>
+                    <td>@if (x.Found) { <span class="badge bg-success">Tìm thấy</span> } else { <span class="badge bg-danger">Không thấy</span> }</td>
+                    <td class="small text-muted">@(x.VisitId ?? "—")</td>
+                    <td class="small text-muted">@x.SearchDTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="6" class="text-center text-muted py-4">Chưa có lượt tra cứu nào.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+</div>

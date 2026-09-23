@@ -212,6 +212,23 @@ public class BoxItem : IOrgOwned
     public DateTime PackedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Lịch sử tra cứu — port từ Rpt_SearchHis của InBrand.
+// Ghi lại mỗi lần người dùng tra cứu 1 mã (serial xác thực / mã lô / mã hộp) để thống kê & truy vết.
+public enum SearchType { Authenticity = 0, Trace = 1, Box = 2 }
+
+public class SearchLog : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string SearchCode { get; set; } = "";          // mã đã tra cứu (serial / mã lô / mã hộp)
+    public string? UserCode { get; set; }                  // người tra cứu (nếu đã đăng nhập)
+    public SearchType Type { get; set; }                   // loại tra cứu (xác thực / nguồn gốc / hộp)
+    public bool Found { get; set; }                        // có tìm thấy kết quả không
+    public string? VisitId { get; set; }                   // SkycicVisitID — mã phiên truy cập
+    public DateTime SearchDTime { get; set; } = DateTime.UtcNow;   // thời điểm tra cứu
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

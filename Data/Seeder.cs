@@ -91,6 +91,14 @@ public static class Seeder
             db.Cans.Add(can); await db.SaveChangesAsync();
             box.CanId = can.Id;
             await db.SaveChangesAsync();
+
+            // Lịch sử tra cứu demo — port từ Rpt_SearchHis của InBrand.
+            db.SearchLogs.AddRange(
+                new SearchLog { SearchCode = "VGC-2026-0001", Type = SearchType.Authenticity, Found = true, UserCode = "khach-hcm", VisitId = "VISIT-DEMO-01", SearchDTime = DateTime.UtcNow.AddHours(-3) },
+                new SearchLog { SearchCode = "GAO-ST25-2026-A", Type = SearchType.Trace, Found = true, UserCode = "khach-hn", VisitId = "VISIT-DEMO-02", SearchDTime = DateTime.UtcNow.AddHours(-2) },
+                new SearchLog { SearchCode = "BOX-VGC-0001", Type = SearchType.Box, Found = true, UserCode = "khach-hcm", VisitId = "VISIT-DEMO-01", SearchDTime = DateTime.UtcNow.AddHours(-1) },
+                new SearchLog { SearchCode = "VGC-9999-0000", Type = SearchType.Authenticity, Found = false, UserCode = "khach-dn", VisitId = "VISIT-DEMO-03", SearchDTime = DateTime.UtcNow.AddMinutes(-30) });
+            await db.SaveChangesAsync();
         }
     }
 
@@ -106,7 +114,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

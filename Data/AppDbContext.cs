@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<Box> Boxes => Set<Box>();
     public DbSet<Can> Cans => Set<Can>();
     public DbSet<BoxItem> BoxItems => Set<BoxItem>();
+    public DbSet<SearchLog> SearchLogs => Set<SearchLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -95,6 +96,12 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => new { x.BoxId, x.SerialNo }).IsUnique();   // 1 serial chỉ nằm 1 lần trong 1 hộp
             e.HasOne(x => x.Box).WithMany(x => x.Items).HasForeignKey(x => x.BoxId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<SearchLog>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.SearchCode });            // tra cứu nhanh theo mã
+            e.HasIndex(x => x.SearchDTime);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }
