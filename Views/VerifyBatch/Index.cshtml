@@ -1,0 +1,48 @@
+@model List<BatchSummary>
+@{
+    ViewData["Title"] = "Lần xuất ghép (batch xác thực)";
+    var q = (string?)ViewBag.Q;
+}
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <p class="text-muted small">Lần xuất ghép — gom nhiều tem (IDNo) đã xác thực để ghép với 1 đơn hàng/phiếu xuất. Port từ Inv_VerifiedIDInOut của InBrand.</p>
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-sm-9"><input name="q" value="@q" class="form-control form-control-sm" placeholder="Tìm mã lần ghép / sản phẩm / đơn hàng" /></div>
+            <div class="col-sm-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Lọc</button></div>
+        </form>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã lần ghép</th><th>Sản phẩm</th><th>Đơn hàng</th><th class="text-center">KH / Thực / Ghép</th><th class="text-center">Lỗi</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <td class="fw-semibold small"><a href="/VerifyBatch/Detail/@s.Batch.Id"><code>@s.Batch.Code</code></a></td>
+                    <td>@s.Batch.ProductName</td>
+                    <td class="small">@(s.Batch.RefNo ?? "—")</td>
+                    <td class="text-center small">@s.Batch.QtyPlan / @s.Batch.QtyInit / <span class="fw-semibold text-success">@s.QtyOK</span></td>
+                    <td class="text-center">@if (s.QtyNG > 0) { <span class="badge bg-danger">@s.QtyNG</span> } else { <span class="text-muted">0</span> }</td>
+                    <td>
+                        @if (s.Batch.Status == VerifyBatchStatus.Open) { <span class="badge bg-warning text-dark">Đang mở</span> }
+                        else if (s.Batch.Status == VerifyBatchStatus.Merged) { <span class="badge bg-success">Đã chốt</span> }
+                        else { <span class="badge bg-secondary">Đã huỷ</span> }
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="6" class="text-center text-muted py-4">Chưa có lần xuất ghép.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Tạo lần xuất ghép</h6>
+        <form asp-action="Create" method="post">@Html.AntiForgeryToken()
+            <div class="mb-2"><input name="productName" class="form-control" placeholder="Tên sản phẩm *" required /></div>
+            <div class="mb-2"><input name="refNo" class="form-control" placeholder="Mã đơn hàng" /></div>
+            <div class="mb-2"><input name="refNoSys" class="form-control" placeholder="Mã phiếu xuất kho" /></div>
+            <div class="mb-2"><input name="plateNo" class="form-control" placeholder="Biển số xe" /></div>
+            <div class="mb-2"><input name="receivePlace" class="form-control" placeholder="Địa điểm nhận hàng" /></div>
+            <div class="mb-3"><input name="qtyPlan" type="number" value="0" min="0" class="form-control" placeholder="Số lượng kế hoạch" /></div>
+            <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Tạo</button>
+        </form>
+        <div class="small text-muted mt-3">Sau khi tạo, mở chi tiết để quét tem và chốt (Merge).</div>
+    </div></div></div>
+</div>

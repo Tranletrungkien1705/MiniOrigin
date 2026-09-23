@@ -193,6 +193,55 @@ public class AuthenticityController(IAuthenticityService svc, IOriginService ori
     }
 }
 
+public class VerifyBatchController(IVerifyBatchService svc) : Controller
+{
+    // Quản trị lần xuất ghép (batch xác thực) — port từ Inv_VerifiedIDInOut của InBrand.
+    public async Task<IActionResult> Index(string? q)
+    {
+        ViewBag.Q = q;
+        return View(await svc.ListAsync(q));
+    }
+
+    public async Task<IActionResult> Detail(int id)
+    {
+        var s = await svc.GetAsync(id);
+        return s == null ? NotFound() : View(s);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string productName, string? refNo, string? refNoSys,
+        string? transportType, string? plateNo, string? receivePlace, string? invOutType, int qtyPlan)
+    {
+        var (ok, msg, id) = await svc.CreateAsync(productName, refNo, refNoSys, transportType, plateNo, receivePlace, invOutType, qtyPlan);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return ok ? RedirectToAction(nameof(Detail), new { id }) : RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Scan(int id, string idNo, string? pin, string? boxNo, string? customerName)
+    {
+        var (ok, msg, _) = await svc.ScanAsync(id, idNo, pin, boxNo, customerName);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Merge(int id)
+    {
+        var (ok, msg) = await svc.MergeAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var (ok, msg) = await svc.CancelAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+}
+
 public class OrgController(AppDbContext db) : Controller
 {
     public async Task<IActionResult> Index()

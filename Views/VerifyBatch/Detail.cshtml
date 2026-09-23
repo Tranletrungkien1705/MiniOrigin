@@ -1,0 +1,89 @@
+@model BatchSummary
+@{
+    var b = Model.Batch;
+    ViewData["Title"] = "Lần xuất ghép " + b.Code;
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/VerifyBatch" class="text-decoration-none small"><i class="bi bi-arrow-left me-1"></i>Danh sách</a>
+    <div class="d-flex gap-2">
+        @if (b.Status == VerifyBatchStatus.Open)
+        {
+            <form asp-action="Merge" method="post" onsubmit="return confirm('Chốt lần xuất ghép này?');">@Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@b.Id" />
+                <button class="btn btn-sm btn-primary"><i class="bi bi-check2-circle me-1"></i>Chốt (Merge)</button>
+            </form>
+        }
+        @if (b.Status != VerifyBatchStatus.Cancelled)
+        {
+            <form asp-action="Cancel" method="post" onsubmit="return confirm('Huỷ lần xuất ghép này?');">@Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@b.Id" />
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle me-1"></i>Huỷ</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted small">Số kế hoạch</div><div class="stat-num">@b.QtyPlan</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted small">Thực nhập</div><div class="stat-num">@b.QtyInit</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted small">Ghép được (OK)</div><div class="stat-num text-success">@Model.QtyOK</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-muted small">Tem lỗi (NG)</div><div class="stat-num text-danger">@Model.QtyNG</div></div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Tem trong lần ghép</h6>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>IDNo (mã tem)</th><th>Sản phẩm</th><th>Hộp</th><th>Khách hàng</th><th>Kết quả</th></tr></thead>
+            <tbody>
+            @foreach (var i in b.Items.OrderBy(x => x.ScannedAt))
+            {
+                <tr>
+                    <td class="small"><code>@i.IdNo</code></td>
+                    <td class="small">@(i.ProductName ?? "—")</td>
+                    <td class="small">@(i.BoxNo ?? "—")</td>
+                    <td class="small">@(i.CustomerName ?? "—")</td>
+                    <td>
+                        @if (i.FlagNG) { <span class="badge bg-danger" title="@i.ErrorReason">Lỗi</span> }
+                        else { <span class="badge bg-success">OK</span> }
+                    </td>
+                </tr>
+            }
+            @if (b.Items.Count == 0) { <tr><td colspan="5" class="text-center text-muted py-4">Chưa quét tem nào.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4">
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thông tin</h6>
+            <dl class="row small mb-0">
+                <dt class="col-5 text-muted">Mã lần ghép</dt><dd class="col-7"><code>@b.Code</code></dd>
+                <dt class="col-5 text-muted">Sản phẩm</dt><dd class="col-7">@b.ProductName</dd>
+                <dt class="col-5 text-muted">Đơn hàng</dt><dd class="col-7">@(b.RefNo ?? "—")</dd>
+                <dt class="col-5 text-muted">Phiếu xuất</dt><dd class="col-7">@(b.RefNoSys ?? "—")</dd>
+                <dt class="col-5 text-muted">Biển số xe</dt><dd class="col-7">@(b.PlateNo ?? "—")</dd>
+                <dt class="col-5 text-muted">Nơi nhận</dt><dd class="col-7">@(b.ReceivePlace ?? "—")</dd>
+                <dt class="col-5 text-muted">Trạng thái</dt><dd class="col-7">@b.Status</dd>
+            </dl>
+        </div></div>
+        @if (b.Status == VerifyBatchStatus.Open)
+        {
+            <div class="card"><div class="card-body">
+                <h6 class="fw-bold mb-3">Quét tem</h6>
+                <form asp-action="Scan" method="post">@Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@b.Id" />
+                    <div class="mb-2"><input name="idNo" class="form-control" placeholder="Mã tem (IDNo) *" required /></div>
+                    <div class="mb-2"><input name="pin" class="form-control" placeholder="Mã bí mật (PIN)" /></div>
+                    <div class="mb-2"><input name="boxNo" class="form-control" placeholder="Hộp" /></div>
+                    <div class="mb-3"><input name="customerName" class="form-control" placeholder="Khách hàng" /></div>
+                    <button class="btn btn-primary w-100"><i class="bi bi-upc-scan me-1"></i>Quét</button>
+                </form>
+                <div class="small text-muted mt-3">Tem phải có trong kho xác thực và chưa ghép ở lần khác; nếu không sẽ bị đánh dấu lỗi.</div>
+            </div></div>
+        }
+    </div>
+</div>

@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<LotLink> LotLinks => Set<LotLink>();
     public DbSet<TraceEvent> Events => Set<TraceEvent>();
     public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
+    public DbSet<VerifyBatch> VerifyBatches => Set<VerifyBatch>();
+    public DbSet<VerifyBatchItem> VerifyBatchItems => Set<VerifyBatchItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -62,6 +64,17 @@ public class AppDbContext : DbContext
             e.HasIndex(x => new { x.OrgId, x.SerialNo }).IsUnique();   // serial duy nhất theo tenant
             e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId);
             e.HasOne(x => x.Brand).WithMany().HasForeignKey(x => x.BrandId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<VerifyBatch>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã lần xuất ghép duy nhất theo tenant
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<VerifyBatchItem>(e =>
+        {
+            e.HasIndex(x => new { x.BatchId, x.IdNo }).IsUnique();     // 1 tem chỉ xuất hiện 1 lần trong 1 lần ghép
+            e.HasOne(x => x.Batch).WithMany(x => x.Items).HasForeignKey(x => x.BatchId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }

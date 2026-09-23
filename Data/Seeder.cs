@@ -64,6 +64,20 @@ public static class Seeder
                 Ev(fin.Id, pack, factory, DateTime.Today.AddDays(-26), "Tổ đóng gói", new() { ["packsize"] = "5" }, 2),
                 Ev(fin.Id, ship, wh, DateTime.Today.AddDays(-20), "Logistics", new() { ["vehicle"] = "51C-678.90", ["temp"] = "28" }, 3));
             await db.SaveChangesAsync();
+
+            // Lần xuất ghép demo — port từ Inv_VerifiedIDInOut của InBrand.
+            var batch = new VerifyBatch
+            {
+                Code = "IVIDINOUTNO.DEMO.0001", ProductName = "Gạch Granite 60x60",
+                RefNo = "PXK2026-DEMO", RefNoSys = "PXK2026-DEMO", PlateNo = "51C-678.90",
+                ReceivePlace = "Kho phân phối HCM", QtyPlan = 2, Status = VerifyBatchStatus.Open
+            };
+            db.VerifyBatches.Add(batch); await db.SaveChangesAsync();
+            db.VerifyBatchItems.AddRange(
+                new VerifyBatchItem { BatchId = batch.Id, IdNo = "VGC-2026-0001", ProductName = "Gạch Granite 60x60", BoxNo = "BOX-01", CustomerName = "Đại lý HCM" },
+                new VerifyBatchItem { BatchId = batch.Id, IdNo = "VGC-2026-0002", ProductName = "Gạch Granite 60x60", BoxNo = "BOX-01", CustomerName = "Đại lý HCM" });
+            batch.QtyInit = 2; batch.QtyVerified = 2;
+            await db.SaveChangesAsync();
         }
     }
 
@@ -79,7 +93,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

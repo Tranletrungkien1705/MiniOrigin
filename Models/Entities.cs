@@ -127,6 +127,49 @@ public class ProductUnit : IOrgOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Lần xuất ghép (batch xác thực) — port từ Inv_VerifiedIDInOut của InBrand.
+// Một "lần xuất ghép" gom 1 lô tem (IDNo) đã xác thực để ghép với 1 đơn hàng/phiếu xuất.
+public enum VerifyBatchStatus { Open = 0, Merged = 1, Cancelled = 2 }
+
+public class VerifyBatch : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // IVerifiedIDInOutNo — mã lần xuất ghép
+    public string ProductName { get; set; } = "";         // sản phẩm ghép
+    public string? RefNo { get; set; }                    // mã đơn hàng / phiếu xuất
+    public string? RefNoSys { get; set; }                 // mã phiếu xuất kho (hệ thống)
+    public string? TransportType { get; set; }            // loại phương tiện
+    public string? PlateNo { get; set; }                  // biển số xe
+    public string? ReceivePlace { get; set; }             // địa điểm nhận hàng
+    public string? InvOutType { get; set; }               // loại xuất kho
+    public int QtyPlan { get; set; }                      // số lượng kế hoạch
+    public int QtyInit { get; set; }                      // số lượng thực tế nhập vào
+    public int QtyVerified { get; set; }                  // số lượng ghép được (OK)
+    public VerifyBatchStatus Status { get; set; } = VerifyBatchStatus.Open;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? MergedAt { get; set; }
+
+    public List<VerifyBatchItem> Items { get; set; } = new();
+}
+
+// Tem (IDNo) trong 1 lần xuất ghép — port từ Inv_InventoryVerifiedID.
+public class VerifyBatchItem : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int BatchId { get; set; }
+    public VerifyBatch? Batch { get; set; }
+    public string IdNo { get; set; } = "";               // mã tem (IDNo)
+    public string? Pin { get; set; }                      // mã bí mật đi kèm tem (nếu có)
+    public string? ProductName { get; set; }
+    public string? BoxNo { get; set; }                    // hộp chứa tem
+    public string? CustomerName { get; set; }             // khách hàng nhận
+    public bool FlagNG { get; set; }                      // tem lỗi (không ghép được)
+    public string? ErrorReason { get; set; }              // lý do lỗi
+    public DateTime ScannedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

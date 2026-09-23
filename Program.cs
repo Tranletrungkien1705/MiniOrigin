@@ -22,6 +22,7 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
+builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -129,6 +130,55 @@ app.MapPost("/api/units", async (UnitReq r, IAuthenticityService svc) =>
     return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
 });
 
+// Lần xuất ghép (batch xác thực) — port từ Inv_VerifiedIDInOut của InBrand.
+// Gom nhiều tem (IDNo) đã xác thực để ghép với 1 đơn hàng/phiếu xuất.
+app.MapGet("/api/verify-batches", async (string? q, IVerifyBatchService svc) =>
+    Results.Ok((await svc.ListAsync(q)).Select(s => new
+    {
+        s.Batch.Id, s.Batch.Code, s.Batch.ProductName, s.Batch.RefNo, s.Batch.RefNoSys,
+        s.Batch.PlateNo, s.Batch.ReceivePlace, s.Batch.QtyPlan, s.Batch.QtyInit, s.Batch.QtyVerified,
+        status = s.Batch.Status.ToString(), s.QtyOK, s.QtyNG, s.QtyRemain, s.Batch.CreatedAt
+    })));
+
+app.MapGet("/api/verify-batches/{id:int}", async (int id, IVerifyBatchService svc) =>
+{
+    var s = await svc.GetAsync(id);
+    if (s == null) return Results.NotFound(new { error = "Không tìm thấy lần xuất ghép." });
+    return Results.Ok(new
+    {
+        s.Batch.Id, s.Batch.Code, s.Batch.ProductName, s.Batch.RefNo, s.Batch.RefNoSys,
+        s.Batch.TransportType, s.Batch.PlateNo, s.Batch.ReceivePlace, s.Batch.InvOutType,
+        s.Batch.QtyPlan, s.Batch.QtyInit, s.Batch.QtyVerified, status = s.Batch.Status.ToString(),
+        s.QtyOK, s.QtyNG, s.QtyRemain,
+        items = s.Batch.Items.Select(i => new { i.IdNo, i.ProductName, i.BoxNo, i.CustomerName, i.FlagNG, i.ErrorReason, i.ScannedAt })
+    });
+});
+
+app.MapPost("/api/verify-batches", async (VerifyBatchReq r, IVerifyBatchService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.ProductName ?? "", r.RefNo, r.RefNoSys, r.TransportType, r.PlateNo, r.ReceivePlace, r.InvOutType, r.QtyPlan);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+// Quét 1 tem vào lần ghép (tem lỗi vẫn ghi nhận nhưng không tính vào số ghép được).
+app.MapPost("/api/verify-batches/{id:int}/scan", async (int id, ScanReq r, IVerifyBatchService svc) =>
+{
+    var (ok, msg, isNG) = await svc.ScanAsync(id, r.IdNo ?? "", r.Pin, r.BoxNo, r.CustomerName);
+    return ok ? Results.Ok(new { ok, isNG, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/verify-batches/{id:int}/merge", async (int id, IVerifyBatchService svc) =>
+{
+    var (ok, msg) = await svc.MergeAsync(id);
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/verify-batches/{id:int}/cancel", async (int id, IVerifyBatchService svc) =>
+{
+    var (ok, msg) = await svc.CancelAsync(id);
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Name)) return Results.BadRequest(new { error = "Cần Name." });
@@ -212,6 +262,8 @@ record BrandReq(string? Code, string? Name, bool Active = true);
 record VerifyReq(string? Serial, string? Pin);
 record ActivateReq(string? Serial, string? Pin, string? CustomerName, string? Phone, string? Address);
 record UnitReq(string? Serial, string? Pin, int? ProductId, int? BrandId, string? LotCode, string? Origin, int WarrantyMonths = 12);
+record VerifyBatchReq(string? ProductName, string? RefNo, string? RefNoSys, string? TransportType, string? PlateNo, string? ReceivePlace, string? InvOutType, int QtyPlan);
+record ScanReq(string? IdNo, string? Pin, string? BoxNo, string? CustomerName);
 record ImportGlnDto(string? Code, string? Name, string? Address);
 record ImportOriginProdDto(string? Code, string? Name, string? Unit);
 record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);
