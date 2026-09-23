@@ -508,3 +508,61 @@ public class TraceEvent : IOrgOwned
     public int Sequence { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+// Loại kho (master) — port từ Mst_InventoryType của InBrand.
+// Phân loại kho hàng (VD: Kho thành phẩm, Kho nguyên liệu, Kho trung chuyển).
+public class InventoryType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // InvType — mã loại kho (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // InvTypeName — tên loại kho
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Cấp kho (master) — port từ Mst_InventoryLevelType của InBrand.
+// Phân cấp kho theo tầng quản lý (VD: Kho tổng, Kho vùng, Kho chi nhánh).
+public class InventoryLevelType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // InvLevelType — mã cấp kho (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // InvLevelTypeName — tên cấp kho
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Kho hàng (master) — port từ Mst_Inventory của InBrand.
+// Kho là điểm lưu trữ hàng hoá; có phân cấp cha–con (InvCodeParent) và gắn loại kho + cấp kho.
+// Luật (theo MstInventoryManager.MstInventoryCheckDB + Add/Update/Remove):
+//  - InvCode bắt buộc + duy nhất theo tenant (Add: Flag.No → mã phải CHƯA tồn tại;
+//    Update/Remove: Flag.Yes → mã phải TỒN TẠI);
+//  - InvCodeParent bắt buộc, phải TỒN TẠI & ĐANG HOẠT ĐỘNG;
+//  - InvLevelType bắt buộc, phải TỒN TẠI & ĐANG HOẠT ĐỘNG;
+//  - InvType bắt buộc, phải TỒN TẠI & ĐANG HOẠT ĐỘNG;
+//  - InvName bắt buộc;
+//  - khi tạo: InvBUCode/InvBUPattern="X", InvLevel=1, FlagActive=Active.
+public class Inventory : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // InvCode — mã kho (duy nhất theo tenant)
+    public int? ParentId { get; set; }                    // InvCodeParent — kho cấp trên
+    public Inventory? Parent { get; set; }
+    public string BuCode { get; set; } = "X";            // InvBUCode — mã đơn vị kinh doanh
+    public string BuPattern { get; set; } = "X";         // InvBUPattern — mẫu mã đơn vị kinh doanh
+    public double Level { get; set; } = 1;                // InvLevel — cấp trong cây kho
+    public int? LevelTypeId { get; set; }                 // InvLevelType — cấp kho
+    public InventoryLevelType? LevelType { get; set; }
+    public int? TypeId { get; set; }                      // InvType — loại kho
+    public InventoryType? Type { get; set; }
+    public string Name { get; set; } = "";               // InvName — tên kho
+    public string? Address { get; set; }                  // InvAddress — địa chỉ
+    public string? ContactName { get; set; }              // InvContactName — người liên hệ
+    public string? ContactPhone { get; set; }             // InvContactPhone — điện thoại liên hệ
+    public string? ContactEmail { get; set; }             // InvContactEmail — email liên hệ
+    public bool Active { get; set; } = true;             // FlagActive
+    public string? Remark { get; set; }                   // Remark — ghi chú
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}

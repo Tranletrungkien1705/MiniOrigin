@@ -183,6 +183,26 @@ public static class Seeder
                 new TraceTemplateCteKde { TemplateId = tpl.Id, CteCode = "HARVEST", KdeCode = "FIELD", FlagKey = true },
                 new TraceTemplateCteKde { TemplateId = tpl.Id, CteCode = "PACK", KdeCode = "PACKSIZE" });
             await db.SaveChangesAsync();
+
+            // Danh mục Kho hàng demo — port từ Mst_Inventory / Mst_InventoryType / Mst_InventoryLevelType của InBrand.
+            var itTP = new InventoryType { Code = "TP", Name = "Kho thành phẩm", Active = true };
+            var itNL = new InventoryType { Code = "NL", Name = "Kho nguyên liệu", Active = true };
+            db.InventoryTypes.AddRange(itTP, itNL); await db.SaveChangesAsync();
+
+            var ilTong = new InventoryLevelType { Code = "TONG", Name = "Kho tổng", Active = true };
+            var ilVung = new InventoryLevelType { Code = "VUNG", Name = "Kho vùng", Active = true };
+            db.InventoryLevelTypes.AddRange(ilTong, ilVung); await db.SaveChangesAsync();
+
+            var invRoot = new Inventory
+            {
+                Code = "KHO-HCM", Name = "Kho tổng HCM", TypeId = itTP.Id, LevelTypeId = ilTong.Id,
+                Address = "TP.HCM", ContactName = "Trần Văn Kho", ContactPhone = "0901234567", Active = true
+            };
+            db.Inventories.Add(invRoot); await db.SaveChangesAsync();
+            db.Inventories.AddRange(
+                new Inventory { Code = "KHO-HCM-Q1", Name = "Kho vùng Quận 1", ParentId = invRoot.Id, TypeId = itTP.Id, LevelTypeId = ilVung.Id, Active = true },
+                new Inventory { Code = "KHO-HN", Name = "Kho tổng Hà Nội", TypeId = itNL.Id, LevelTypeId = ilTong.Id, Active = true });
+            await db.SaveChangesAsync();
         }
     }
 
@@ -198,7 +218,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "PartUnits", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers", "TraceTemplates", "TraceTemplateCtes", "TraceTemplateKdes", "TraceTemplateCteKdes" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "PartUnits", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers", "TraceTemplates", "TraceTemplateCtes", "TraceTemplateKdes", "TraceTemplateCteKdes", "InventoryTypes", "InventoryLevelTypes", "Inventories" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

@@ -39,6 +39,9 @@ public class AppDbContext : DbContext
     public DbSet<TraceTemplateCte> TraceTemplateCtes => Set<TraceTemplateCte>();
     public DbSet<TraceTemplateKde> TraceTemplateKdes => Set<TraceTemplateKde>();
     public DbSet<TraceTemplateCteKde> TraceTemplateCteKdes => Set<TraceTemplateCteKde>();
+    public DbSet<InventoryType> InventoryTypes => Set<InventoryType>();
+    public DbSet<InventoryLevelType> InventoryLevelTypes => Set<InventoryLevelType>();
+    public DbSet<Inventory> Inventories => Set<Inventory>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -175,6 +178,16 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => new { x.TemplateId, x.CteCode, x.KdeCode }).IsUnique();   // 1 cặp CTE-KDE chỉ gán 1 lần
             e.HasOne(x => x.Template).WithMany(x => x.CteKdes).HasForeignKey(x => x.TemplateId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<InventoryType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<InventoryLevelType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<Inventory>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã kho duy nhất theo tenant
+            e.HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId);
+            e.HasOne(x => x.LevelType).WithMany().HasForeignKey(x => x.LevelTypeId);
+            e.HasOne(x => x.Type).WithMany().HasForeignKey(x => x.TypeId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }

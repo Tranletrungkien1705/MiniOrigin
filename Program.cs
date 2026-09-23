@@ -33,6 +33,7 @@ builder.Services.AddScoped<ISearchLogService, SearchLogService>();
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IDealerService, DealerService>();
 builder.Services.AddScoped<ITraceTemplateService, TraceTemplateService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -658,6 +659,101 @@ app.MapDelete("/api/trace-templates/{id:int}", async (int id, ITraceTemplateServ
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
+// Danh mục Kho hàng (nguồn gốc thương hiệu) — port từ Mst_Inventory / Mst_InventoryType / Mst_InventoryLevelType của InBrand.
+// Loại kho (Mst_InventoryType).
+app.MapGet("/api/inventory-types", async (string? q, bool? active, IInventoryService svc) =>
+    Results.Ok((await svc.ListTypesAsync(q, active)).Select(v => new
+    {
+        v.Type.Id, v.Type.Code, v.Type.Name, v.Type.Active, v.InventoryCount
+    })));
+
+app.MapPost("/api/inventory-types", async (InventoryTypeReq r, IInventoryService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateTypeAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/inventory-types/{id:int}", async (int id, InventoryTypeReq r, IInventoryService svc) =>
+{
+    var (ok, msg) = await svc.UpdateTypeAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/inventory-types/{id:int}", async (int id, IInventoryService svc) =>
+{
+    var (ok, msg) = await svc.DeleteTypeAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Cấp kho (Mst_InventoryLevelType).
+app.MapGet("/api/inventory-level-types", async (string? q, bool? active, IInventoryService svc) =>
+    Results.Ok((await svc.ListLevelTypesAsync(q, active)).Select(v => new
+    {
+        v.LevelType.Id, v.LevelType.Code, v.LevelType.Name, v.LevelType.Active, v.InventoryCount
+    })));
+
+app.MapPost("/api/inventory-level-types", async (InventoryLevelTypeReq r, IInventoryService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateLevelTypeAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/inventory-level-types/{id:int}", async (int id, InventoryLevelTypeReq r, IInventoryService svc) =>
+{
+    var (ok, msg) = await svc.UpdateLevelTypeAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/inventory-level-types/{id:int}", async (int id, IInventoryService svc) =>
+{
+    var (ok, msg) = await svc.DeleteLevelTypeAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Kho hàng (Mst_Inventory) — phân cấp cha–con; kho cấp trên + loại kho + cấp kho phải tồn tại & đang hoạt động.
+app.MapGet("/api/inventories", async (string? q, bool? active, IInventoryService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Inventory.Id, v.Inventory.Code, v.Inventory.Name, v.Inventory.ParentId, parentName = v.ParentName,
+        v.Inventory.TypeId, typeName = v.TypeName, v.Inventory.LevelTypeId, levelTypeName = v.LevelTypeName,
+        v.Inventory.Address, v.Inventory.ContactName, v.Inventory.ContactPhone, v.Inventory.ContactEmail,
+        v.Inventory.Level, v.Inventory.Active, v.Inventory.Remark, v.ChildCount
+    })));
+
+app.MapGet("/api/inventories/{id:int}", async (int id, IInventoryService svc) =>
+{
+    var v = await svc.GetAsync(id);
+    if (v == null) return Results.NotFound(new { error = "Không tìm thấy kho." });
+    return Results.Ok(new
+    {
+        v.Inventory.Id, v.Inventory.Code, v.Inventory.Name, v.Inventory.ParentId, parentName = v.ParentName,
+        v.Inventory.TypeId, typeName = v.TypeName, v.Inventory.LevelTypeId, levelTypeName = v.LevelTypeName,
+        v.Inventory.BuCode, v.Inventory.BuPattern, v.Inventory.Level, v.Inventory.Address,
+        v.Inventory.ContactName, v.Inventory.ContactPhone, v.Inventory.ContactEmail,
+        v.Inventory.Active, v.Inventory.Remark, v.ChildCount
+    });
+});
+
+app.MapPost("/api/inventories", async (InventoryReq r, IInventoryService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.ParentId, r.TypeId, r.LevelTypeId,
+        r.Address, r.ContactName, r.ContactPhone, r.ContactEmail, r.Remark, r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/inventories/{id:int}", async (int id, InventoryReq r, IInventoryService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.ParentId, r.TypeId, r.LevelTypeId,
+        r.Address, r.ContactName, r.ContactPhone, r.ContactEmail, r.Remark, r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/inventories/{id:int}", async (int id, IInventoryService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Name)) return Results.BadRequest(new { error = "Cần Name." });
@@ -770,3 +866,6 @@ record TraceCteReq(string? Code, string? Name, string? ApiLink);
 record TraceKdeReq(string? Code, string? Name, string? DataType, string? RefNoList, bool FlagList = false, bool FlagQuery = false);
 record TraceCteKdeReq(string? CteCode, string? KdeCode, string? ApiLink, bool FlagOsOrgView = false, bool FlagKey = false);
 record TraceTemplateReq(string? Code, string? Name, string? Remark, List<TraceCteReq>? Ctes, List<TraceKdeReq>? Kdes, List<TraceCteKdeReq>? CteKdes);
+record InventoryTypeReq(string? Code, string? Name, bool Active = true);
+record InventoryLevelTypeReq(string? Code, string? Name, bool Active = true);
+record InventoryReq(string? Code, string? Name, int? ParentId, int? TypeId, int? LevelTypeId, string? Address, string? ContactName, string? ContactPhone, string? ContactEmail, string? Remark, bool Active = true);

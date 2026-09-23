@@ -651,6 +651,87 @@ public class DealerController(IDealerService svc) : Controller
     }
 }
 
+public class InventoryController(IInventoryService svc) : Controller
+{
+    // Danh mục Kho hàng (nguồn gốc thương hiệu) — port từ Mst_Inventory / Mst_InventoryType / Mst_InventoryLevelType của InBrand.
+    public async Task<IActionResult> Index(string? q, bool? active)
+    {
+        ViewBag.Q = q; ViewBag.Active = active;
+        ViewBag.Types = await svc.ListTypesAsync(null, null);
+        ViewBag.LevelTypes = await svc.ListLevelTypesAsync(null, null);
+        ViewBag.Inventories = await svc.ListAsync(null, true);
+        return View(await svc.ListAsync(q, active));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, string name, int? parentId, int? typeId, int? levelTypeId,
+        string? address, string? contactName, string? contactPhone, string? contactEmail, string? remark, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateAsync(code, name, parentId, typeId, levelTypeId,
+            address, contactName, contactPhone, contactEmail, remark, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, string name, int? parentId, int? typeId, int? levelTypeId,
+        string? address, string? contactName, string? contactPhone, string? contactEmail, string? remark, bool active)
+    {
+        var (ok, msg) = await svc.UpdateAsync(id, name, parentId, typeId, levelTypeId,
+            address, contactName, contactPhone, contactEmail, remark, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Toggle(int id, bool active)
+    {
+        var (ok, msg) = await svc.SetActiveAsync(id, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var (ok, msg) = await svc.DeleteAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateType(string code, string name, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateTypeAsync(code, name, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteType(int id)
+    {
+        var (ok, msg) = await svc.DeleteTypeAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateLevelType(string code, string name, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateLevelTypeAsync(code, name, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteLevelType(int id)
+    {
+        var (ok, msg) = await svc.DeleteLevelTypeAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+}
+
 public class TraceTemplateController(ITraceTemplateService svc) : Controller
 {
     // Mẫu truy xuất (TemplateNWType) — port từ Mst_TemplateNWType / TplNWT_Mst_CTE / TplNWT_Mst_KDE / TplNWT_CTE_KDE của InBrand.
