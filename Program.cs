@@ -20,6 +20,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 });
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IOriginService, OriginService>();
+builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -64,6 +65,31 @@ app.MapGet("/api/trace/{code}", async (string code, IOriginService svc) =>
         parents = x.Parents.Select(Map)
     };
     return Results.Ok(Map(t));
+});
+
+// Danh mục Thương hiệu (nguồn gốc thương hiệu) — port từ Mst_Brand của InBrand.
+app.MapGet("/api/brands", async (string? q, bool? active, IBrandService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Brand.Id, v.Brand.Code, v.Brand.Name, v.Brand.Active, v.ProductCount
+    })));
+
+app.MapPost("/api/brands", async (BrandReq r, IBrandService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/brands/{id:int}", async (int id, BrandReq r, IBrandService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/brands/{id:int}", async (int id, IBrandService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
@@ -145,6 +171,7 @@ app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Inde
 app.Run();
 
 record RegisterOrgDto(string Name);
+record BrandReq(string? Code, string? Name, bool Active = true);
 record ImportGlnDto(string? Code, string? Name, string? Address);
 record ImportOriginProdDto(string? Code, string? Name, string? Unit);
 record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);

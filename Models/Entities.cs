@@ -50,6 +50,17 @@ public class KdeDef : IOrgOwned
     public int Ordinal { get; set; }
 }
 
+// Thương hiệu (master) — nguồn gốc thương hiệu của sản phẩm (VD VIGLACERA, SANFI)
+public class Brand : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // mã thương hiệu (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // tên hiển thị
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 public class Product : IOrgOwned
 {
     public int Id { get; set; }
@@ -57,6 +68,8 @@ public class Product : IOrgOwned
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public string? Unit { get; set; }
+    public int? BrandId { get; set; }                    // thương hiệu của sản phẩm
+    public Brand? Brand { get; set; }
 }
 
 // Lô sản xuất — đơn vị truy xuất

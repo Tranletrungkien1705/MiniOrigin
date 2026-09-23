@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Gln> Glns => Set<Gln>();
     public DbSet<Cte> Ctes => Set<Cte>();
     public DbSet<KdeDef> Kdes => Set<KdeDef>();
+    public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Lot> Lots => Set<Lot>();
     public DbSet<LotLink> LotLinks => Set<LotLink>();
@@ -28,7 +29,13 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.Cte).WithMany(x => x.Kdes).HasForeignKey(x => x.CteId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
-        b.Entity<Product>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<Brand>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<Product>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();
+            e.HasOne(x => x.Brand).WithMany().HasForeignKey(x => x.BrandId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
         b.Entity<Lot>(e =>
         {
             e.HasIndex(x => x.Code).IsUnique();            // GLOBAL — tra cứu công khai xuyên tenant
