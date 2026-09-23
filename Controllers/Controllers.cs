@@ -198,6 +198,57 @@ public class MaterialTypeController(IMaterialTypeService svc, IOriginService ori
     }
 }
 
+public class PartTypeController(IPartTypeService svc, IOriginService origin) : Controller
+{
+    // Danh mục Loại sản phẩm — port từ Mst_PartType của InBrand.
+    public async Task<IActionResult> Index(string? q, bool? active)
+    {
+        ViewBag.Q = q; ViewBag.Active = active;
+        ViewBag.Products = await origin.ProductsAsync();
+        return View(await svc.ListAsync(q, active));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, string name, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateAsync(code, name, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, string name, bool active)
+    {
+        var (ok, msg) = await svc.UpdateAsync(id, name, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Toggle(int id, bool active)
+    {
+        var (ok, msg) = await svc.SetActiveAsync(id, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var (ok, msg) = await svc.DeleteAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Assign(int productId, int? partTypeId)
+    {
+        var (ok, msg) = await svc.AssignProductAsync(productId, partTypeId);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+}
+
 public class PartUnitController(IPartUnitService svc) : Controller
 {
     // Danh mục Đơn vị tính (master) — port từ Mst_PartUnit của InBrand.

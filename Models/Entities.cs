@@ -74,6 +74,8 @@ public class Product : IOrgOwned
     public WarrantyType? WarrantyType { get; set; }
     public int? MaterialTypeId { get; set; }             // nhóm vật liệu của sản phẩm
     public MaterialType? MaterialType { get; set; }
+    public int? PartTypeId { get; set; }                 // loại sản phẩm của sản phẩm
+    public PartType? PartType { get; set; }
 }
 
 // Loại thời hạn bảo hành (master) — port từ Mst_PartWarrantyType của InBrand.
@@ -97,6 +99,22 @@ public class MaterialType : IOrgOwned
     public Guid OrgId { get; set; }
     public string Code { get; set; } = "";               // PMType — mã nhóm vật liệu (duy nhất theo tenant)
     public string Name { get; set; } = "";               // PMTypeName — tên hiển thị
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Loại sản phẩm (master) — port từ Mst_PartType của InBrand.
+// Phân loại sản phẩm theo loại (VD: Sứ vệ sinh, Sen vòi, Gạch lát nền).
+// Luật (theo MstPartTypeManager.MstPartTypeCheckDB + Add/Update/Remove):
+//  - PartType bắt buộc + duy nhất theo tenant (Add: Flag.No → mã phải CHƯA tồn tại;
+//    Update/Remove: Flag.Yes → mã phải TỒN TẠI);
+//  - PartTypeName bắt buộc; cờ hoạt động FlagActive.
+public class PartType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // PartType — mã loại sản phẩm (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // PartTypeName — tên loại sản phẩm
     public bool Active { get; set; } = true;             // FlagActive
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

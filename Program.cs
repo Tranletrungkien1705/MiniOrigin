@@ -23,6 +23,7 @@ builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IWarrantyTypeService, WarrantyTypeService>();
 builder.Services.AddScoped<IMaterialTypeService, MaterialTypeService>();
+builder.Services.AddScoped<IPartTypeService, PartTypeService>();
 builder.Services.AddScoped<IPartUnitService, PartUnitService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductColorService, ProductColorService>();
@@ -167,6 +168,38 @@ app.MapDelete("/api/material-types/{id:int}", async (int id, IMaterialTypeServic
 app.MapPost("/api/material-types/assign", async (MaterialTypeAssignReq r, IMaterialTypeService svc) =>
 {
     var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.MaterialTypeId);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Danh mục Loại sản phẩm (nguồn gốc thương hiệu) — port từ Mst_PartType của InBrand.
+app.MapGet("/api/part-types", async (string? q, bool? active, IPartTypeService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Type.Id, v.Type.Code, v.Type.Name, v.Type.Active, v.ProductCount
+    })));
+
+app.MapPost("/api/part-types", async (PartTypeReq r, IPartTypeService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/part-types/{id:int}", async (int id, PartTypeReq r, IPartTypeService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/part-types/{id:int}", async (int id, IPartTypeService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Gán loại sản phẩm cho sản phẩm — port từ MstPart.PartType của InBrand.
+app.MapPost("/api/part-types/assign", async (PartTypeAssignReq r, IPartTypeService svc) =>
+{
+    var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.PartTypeId);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
@@ -838,6 +871,8 @@ record WarrantyTypeReq(string? Code, string? Name, string? Remark, bool Active =
 record WarrantyAssignReq(int ProductId, int? WarrantyTypeId);
 record MaterialTypeReq(string? Code, string? Name, bool Active = true);
 record MaterialTypeAssignReq(int ProductId, int? MaterialTypeId);
+record PartTypeReq(string? Code, string? Name, bool Active = true);
+record PartTypeAssignReq(int ProductId, int? PartTypeId);
 record PartUnitReq(string? Code, string? Name, bool IsStandard = false, bool Active = true);
 record SupplierReq(string? Code, string? Name, bool Active = true);
 record ColorReq(string? Code, string? Name, string? NameVn, bool Active = true);
