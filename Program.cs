@@ -23,6 +23,7 @@ builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IWarrantyTypeService, WarrantyTypeService>();
 builder.Services.AddScoped<IMaterialTypeService, MaterialTypeService>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductColorService, ProductColorService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
@@ -162,6 +163,31 @@ app.MapDelete("/api/material-types/{id:int}", async (int id, IMaterialTypeServic
 app.MapPost("/api/material-types/assign", async (MaterialTypeAssignReq r, IMaterialTypeService svc) =>
 {
     var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.MaterialTypeId);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Danh mục Nhà cung cấp (master) — port từ Mst_Supplier của InBrand.
+app.MapGet("/api/suppliers", async (string? q, bool? active, ISupplierService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Supplier.Id, v.Supplier.Code, v.Supplier.Name, v.Supplier.Type, v.Supplier.Active
+    })));
+
+app.MapPost("/api/suppliers", async (SupplierReq r, ISupplierService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/suppliers/{id:int}", async (int id, SupplierReq r, ISupplierService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/suppliers/{id:int}", async (int id, ISupplierService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
@@ -560,6 +586,7 @@ record WarrantyTypeReq(string? Code, string? Name, string? Remark, bool Active =
 record WarrantyAssignReq(int ProductId, int? WarrantyTypeId);
 record MaterialTypeReq(string? Code, string? Name, bool Active = true);
 record MaterialTypeAssignReq(int ProductId, int? MaterialTypeId);
+record SupplierReq(string? Code, string? Name, bool Active = true);
 record ColorReq(string? Code, string? Name, string? NameVn, bool Active = true);
 record ColorMapReq(int ProductId, int ColorId, bool IsDefault = false);
 record ColorMapDefaultReq(bool IsDefault);
