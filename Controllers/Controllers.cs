@@ -651,6 +651,118 @@ public class DealerController(IDealerService svc) : Controller
     }
 }
 
+public class TraceTemplateController(ITraceTemplateService svc) : Controller
+{
+    // Mẫu truy xuất (TemplateNWType) — port từ Mst_TemplateNWType / TplNWT_Mst_CTE / TplNWT_Mst_KDE / TplNWT_CTE_KDE của InBrand.
+    public async Task<IActionResult> Index(string? q, TraceTemplateStatus? status)
+    {
+        ViewBag.Q = q; ViewBag.Status = status;
+        return View(await svc.ListAsync(q, status));
+    }
+
+    public async Task<IActionResult> Detail(int id)
+    {
+        var d = await svc.GetAsync(id);
+        return d == null ? NotFound() : View(d);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, string name, string? remark,
+        string[]? cteCode, string[]? cteName, string[]? cteApiLink,
+        string[]? kdeCode, string[]? kdeName, string[]? kdeDataType, string[]? kdeRefNoList, string[]? kdeFlagList, string[]? kdeFlagQuery,
+        string[]? mapCte, string[]? mapKde, string[]? mapApiLink, string[]? mapOsOrgView, string[]? mapKey)
+    {
+        var ctes = BuildCtes(cteCode, cteName, cteApiLink);
+        var kdes = BuildKdes(kdeCode, kdeName, kdeDataType, kdeRefNoList, kdeFlagList, kdeFlagQuery);
+        var maps = BuildMaps(mapCte, mapKde, mapApiLink, mapOsOrgView, mapKey);
+        var (ok, msg, id) = await svc.CreateAsync(code, name, remark, ctes, kdes, maps);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return ok ? RedirectToAction(nameof(Detail), new { id }) : RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, string name, string? remark,
+        string[]? cteCode, string[]? cteName, string[]? cteApiLink,
+        string[]? kdeCode, string[]? kdeName, string[]? kdeDataType, string[]? kdeRefNoList, string[]? kdeFlagList, string[]? kdeFlagQuery,
+        string[]? mapCte, string[]? mapKde, string[]? mapApiLink, string[]? mapOsOrgView, string[]? mapKey)
+    {
+        var ctes = BuildCtes(cteCode, cteName, cteApiLink);
+        var kdes = BuildKdes(kdeCode, kdeName, kdeDataType, kdeRefNoList, kdeFlagList, kdeFlagQuery);
+        var maps = BuildMaps(mapCte, mapKde, mapApiLink, mapOsOrgView, mapKey);
+        var (ok, msg) = await svc.UpdateAsync(id, name, remark, ctes, kdes, maps);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Approve(int id)
+    {
+        var (ok, msg) = await svc.ApproveAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var (ok, msg) = await svc.CancelAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var (ok, msg) = await svc.DeleteAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    private static List<TraceCteInput> BuildCtes(string[]? code, string[]? name, string[]? apiLink)
+    {
+        var list = new List<TraceCteInput>();
+        if (code == null) return list;
+        for (int i = 0; i < code.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(code[i])) continue;
+            list.Add(new TraceCteInput(code[i], name != null && i < name.Length ? name[i] : "",
+                apiLink != null && i < apiLink.Length ? apiLink[i] : null));
+        }
+        return list;
+    }
+
+    private static List<TraceKdeInput> BuildKdes(string[]? code, string[]? name, string[]? dataType, string[]? refNoList, string[]? flagList, string[]? flagQuery)
+    {
+        var list = new List<TraceKdeInput>();
+        if (code == null) return list;
+        for (int i = 0; i < code.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(code[i])) continue;
+            list.Add(new TraceKdeInput(code[i], name != null && i < name.Length ? name[i] : "",
+                dataType != null && i < dataType.Length ? dataType[i] : null,
+                refNoList != null && i < refNoList.Length ? refNoList[i] : null,
+                flagList != null && i < flagList.Length && flagList[i] == "true",
+                flagQuery != null && i < flagQuery.Length && flagQuery[i] == "true"));
+        }
+        return list;
+    }
+
+    private static List<TraceCteKdeInput> BuildMaps(string[]? cte, string[]? kde, string[]? apiLink, string[]? osOrgView, string[]? key)
+    {
+        var list = new List<TraceCteKdeInput>();
+        if (cte == null) return list;
+        for (int i = 0; i < cte.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(cte[i])) continue;
+            list.Add(new TraceCteKdeInput(cte[i], kde != null && i < kde.Length ? kde[i] : "",
+                apiLink != null && i < apiLink.Length ? apiLink[i] : null,
+                osOrgView != null && i < osOrgView.Length && osOrgView[i] == "true",
+                key != null && i < key.Length && key[i] == "true"));
+        }
+        return list;
+    }
+}
+
 public class OrgController(AppDbContext db) : Controller{
     public async Task<IActionResult> Index()
     {

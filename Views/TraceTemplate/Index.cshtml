@@ -1,0 +1,83 @@
+@model List<TraceTemplateView>
+@{
+    ViewData["Title"] = "Mẫu truy xuất";
+    var q = (string?)ViewBag.Q;
+    var status = (TraceTemplateStatus?)ViewBag.Status;
+}
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <p class="text-muted small">Mẫu truy xuất (TemplateNWType) — định nghĩa bộ sự kiện (CTE) + thành phần dữ liệu (KDE) + gán CTE-KDE cho 1 loại tổ chức. Mã mẫu duy nhất theo đơn vị; vòng đời Chờ duyệt → Duyệt → Huỷ. Port từ Mst_TemplateNWType của InBrand.</p>
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-sm-6"><input name="q" value="@q" class="form-control form-control-sm" placeholder="Tìm mã / tên mẫu" /></div>
+            <div class="col-sm-3"><select name="status" class="form-select form-select-sm">
+                <option value="">Tất cả trạng thái</option>
+                <option value="Pending" selected="@(status == TraceTemplateStatus.Pending)">Chờ duyệt</option>
+                <option value="Approve" selected="@(status == TraceTemplateStatus.Approve)">Đã duyệt</option>
+                <option value="Cancel" selected="@(status == TraceTemplateStatus.Cancel)">Đã huỷ</option>
+            </select></div>
+            <div class="col-sm-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Lọc</button></div>
+        </form>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã</th><th>Tên mẫu</th><th>CTE</th><th>KDE</th><th>Gán</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var v in Model)
+            {
+                <tr>
+                    <td class="fw-semibold small"><a href="@Url.Action("Detail", new { id = v.Template.Id })"><code>@v.Template.Code</code></a></td>
+                    <td>@v.Template.Name</td>
+                    <td class="small text-muted">@v.CteCount</td>
+                    <td class="small text-muted">@v.KdeCount</td>
+                    <td class="small text-muted">@v.CteKdeCount</td>
+                    <td>
+                        @if (v.Template.Status == TraceTemplateStatus.Pending) { <span class="badge bg-warning text-dark">Chờ duyệt</span> }
+                        else if (v.Template.Status == TraceTemplateStatus.Approve) { <span class="badge bg-success">Đã duyệt</span> }
+                        else { <span class="badge bg-secondary">Đã huỷ</span> }
+                    </td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("Detail", new { id = v.Template.Id })" title="Chi tiết"><i class="bi bi-eye"></i></a>
+                        @if (v.Template.Status == TraceTemplateStatus.Pending)
+                        {
+                            <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Xoá mẫu @v.Template.Code?');">@Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@v.Template.Id" />
+                                <button class="btn btn-sm btn-outline-danger" title="Xoá"><i class="bi bi-trash"></i></button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">Chưa có mẫu truy xuất.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4">
+        <div class="card"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thêm mẫu truy xuất</h6>
+            <form asp-action="Create" method="post">@Html.AntiForgeryToken()
+                <div class="mb-2"><input name="code" class="form-control text-uppercase" placeholder="Mã mẫu (VD FRUIT) *" required /></div>
+                <div class="mb-2"><input name="name" class="form-control" placeholder="Tên mẫu *" required /></div>
+                <div class="mb-2"><input name="remark" class="form-control" placeholder="Ghi chú (tùy chọn)" /></div>
+
+                <label class="form-label small fw-semibold mt-2">Sự kiện (CTE) *</label>
+                <div class="row g-1 mb-1"><div class="col-5"><input name="cteCode" class="form-control form-control-sm text-uppercase" placeholder="Mã CTE" /></div>
+                    <div class="col-7"><input name="cteName" class="form-control form-control-sm" placeholder="Mô tả CTE" /></div></div>
+                <div class="row g-1 mb-2"><div class="col-5"><input name="cteCode" class="form-control form-control-sm text-uppercase" placeholder="Mã CTE" /></div>
+                    <div class="col-7"><input name="cteName" class="form-control form-control-sm" placeholder="Mô tả CTE" /></div></div>
+
+                <label class="form-label small fw-semibold mt-2">Thành phần (KDE) *</label>
+                <div class="row g-1 mb-1"><div class="col-5"><input name="kdeCode" class="form-control form-control-sm text-uppercase" placeholder="Mã KDE" /></div>
+                    <div class="col-7"><input name="kdeName" class="form-control form-control-sm" placeholder="Mô tả KDE" /></div></div>
+                <div class="row g-1 mb-2"><div class="col-5"><input name="kdeCode" class="form-control form-control-sm text-uppercase" placeholder="Mã KDE" /></div>
+                    <div class="col-7"><input name="kdeName" class="form-control form-control-sm" placeholder="Mô tả KDE" /></div></div>
+
+                <label class="form-label small fw-semibold mt-2">Gán CTE-KDE *</label>
+                <div class="row g-1 mb-1"><div class="col-6"><input name="mapCte" class="form-control form-control-sm text-uppercase" placeholder="Mã CTE" /></div>
+                    <div class="col-6"><input name="mapKde" class="form-control form-control-sm text-uppercase" placeholder="Mã KDE" /></div></div>
+                <div class="row g-1 mb-3"><div class="col-6"><input name="mapCte" class="form-control form-control-sm text-uppercase" placeholder="Mã CTE" /></div>
+                    <div class="col-6"><input name="mapKde" class="form-control form-control-sm text-uppercase" placeholder="Mã KDE" /></div></div>
+
+                <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Thêm</button>
+            </form>
+            <div class="small text-muted mt-3">Mẫu mới ở trạng thái <code>PENDING</code>; phải có ≥1 CTE, ≥1 KDE và ≥1 gán CTE-KDE.</div>
+        </div></div>
+    </div>
+</div>

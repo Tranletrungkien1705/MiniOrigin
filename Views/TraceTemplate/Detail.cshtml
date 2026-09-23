@@ -1,0 +1,124 @@
+@model TraceTemplateDetail
+@{
+    ViewData["Title"] = "Mẫu truy xuất — " + Model.Template.Code;
+    var t = Model.Template;
+    var editable = t.Status == TraceTemplateStatus.Pending;
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="mb-0"><code>@t.Code</code> — @t.Name</h5>
+        <div class="small text-muted">Mẫu truy xuất (TemplateNWType) — port từ Mst_TemplateNWType của InBrand.</div>
+    </div>
+    <div>
+        @if (t.Status == TraceTemplateStatus.Pending) { <span class="badge bg-warning text-dark">Chờ duyệt</span> }
+        else if (t.Status == TraceTemplateStatus.Approve) { <span class="badge bg-success">Đã duyệt</span> }
+        else { <span class="badge bg-secondary">Đã huỷ</span> }
+        <a class="btn btn-sm btn-outline-secondary ms-2" href="@Url.Action("Index")"><i class="bi bi-arrow-left"></i> Danh sách</a>
+    </div>
+</div>
+
+@if (editable)
+{
+    <div class="mb-3">
+        <form asp-action="Approve" method="post" class="d-inline">@Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@t.Id" />
+            <button class="btn btn-sm btn-success"><i class="bi bi-check2-circle me-1"></i>Duyệt</button>
+        </form>
+        <form asp-action="Cancel" method="post" class="d-inline" onsubmit="return confirm('Huỷ mẫu @t.Code?');">@Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@t.Id" />
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle me-1"></i>Huỷ</button>
+        </form>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Sự kiện (CTE)</h6>
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Mã</th><th>Mô tả</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Ctes)
+            {
+                <tr><td class="small"><code>@c.Code</code></td><td class="small">@c.Name</td></tr>
+            }
+            @if (Model.Ctes.Count == 0) { <tr><td colspan="2" class="text-center text-muted py-3">Chưa có CTE.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Thành phần (KDE)</h6>
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Mã</th><th>Mô tả</th><th>Kiểu</th></tr></thead>
+            <tbody>
+            @foreach (var k in Model.Kdes)
+            {
+                <tr><td class="small"><code>@k.Code</code></td><td class="small">@k.Name</td><td class="small text-muted">@(k.DataType ?? "—")</td></tr>
+            }
+            @if (Model.Kdes.Count == 0) { <tr><td colspan="3" class="text-center text-muted py-3">Chưa có KDE.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Gán CTE-KDE</h6>
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>CTE</th><th>KDE</th><th>Khoá</th></tr></thead>
+            <tbody>
+            @foreach (var m in Model.CteKdes)
+            {
+                <tr><td class="small"><code>@m.CteCode</code></td><td class="small"><code>@m.KdeCode</code></td>
+                    <td class="small">@if (m.FlagKey) { <span class="badge bg-light text-dark border">Key</span> }</td></tr>
+            }
+            @if (Model.CteKdes.Count == 0) { <tr><td colspan="3" class="text-center text-muted py-3">Chưa có gán.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+</div>
+
+@if (editable)
+{
+    <div class="card mt-3"><div class="card-body">
+        <h6 class="fw-bold mb-3">Sửa mẫu (chỉ khi Chờ duyệt)</h6>
+        <form asp-action="Update" method="post">@Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@t.Id" />
+            <div class="row g-2 mb-2">
+                <div class="col-md-4"><input name="name" value="@t.Name" class="form-control form-control-sm" placeholder="Tên mẫu *" required /></div>
+                <div class="col-md-8"><input name="remark" value="@t.Remark" class="form-control form-control-sm" placeholder="Ghi chú" /></div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Sự kiện (CTE)</label>
+                    @foreach (var c in Model.Ctes)
+                    {
+                        <div class="row g-1 mb-1">
+                            <div class="col-5"><input name="cteCode" value="@c.Code" class="form-control form-control-sm text-uppercase" /></div>
+                            <div class="col-7"><input name="cteName" value="@c.Name" class="form-control form-control-sm" /></div>
+                        </div>
+                    }
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Thành phần (KDE)</label>
+                    @foreach (var k in Model.Kdes)
+                    {
+                        <div class="row g-1 mb-1">
+                            <div class="col-5"><input name="kdeCode" value="@k.Code" class="form-control form-control-sm text-uppercase" /></div>
+                            <div class="col-7"><input name="kdeName" value="@k.Name" class="form-control form-control-sm" /></div>
+                        </div>
+                    }
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Gán CTE-KDE</label>
+                    @foreach (var m in Model.CteKdes)
+                    {
+                        <div class="row g-1 mb-1">
+                            <div class="col-6"><input name="mapCte" value="@m.CteCode" class="form-control form-control-sm text-uppercase" /></div>
+                            <div class="col-6"><input name="mapKde" value="@m.KdeCode" class="form-control form-control-sm text-uppercase" /></div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm mt-3"><i class="bi bi-save me-1"></i>Lưu</button>
+        </form>
+    </div></div>
+}

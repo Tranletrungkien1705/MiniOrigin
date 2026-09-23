@@ -414,6 +414,81 @@ public class Dealer : IOrgOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Trạng thái Mẫu truy xuất — port từ TConst.eTemNN.TplNWTStatus của InBrand (PENDING → APPROVE → CANCEL).
+public enum TraceTemplateStatus { Pending = 0, Approve = 1, Cancel = 2 }
+
+// Mẫu truy xuất (TemplateNWType) — port từ Mst_TemplateNWType của InBrand (module eTemNN).
+// Một mẫu định nghĩa bộ sự kiện (CTE) + thành phần dữ liệu (KDE) mà 1 loại tổ chức dùng để truy xuất.
+// Vòng đời: PENDING (tạo/sửa/xoá) → APPROVE (duyệt) → CANCEL (huỷ).
+// Luật (theo MstTemplate.Mst_TemplateNWType_CheckDB + Mst_TemplateNWType_Save):
+//  - TplNWType bắt buộc + duy nhất theo tenant (CheckDB Flag.No → mã phải CHƯA tồn tại;
+//    Flag.Yes → mã phải TỒN TẠI);
+//  - TplNWTDesc bắt buộc;
+//  - chỉ mẫu ở trạng thái PENDING mới được sửa/xoá (SaveX_InvalidStatus).
+public class TraceTemplate : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // TplNWType — mã loại tổ chức/mẫu (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // TplNWTDesc — tên mẫu
+    public TraceTemplateStatus Status { get; set; } = TraceTemplateStatus.Pending;   // TplNWTStatus
+    public string? Remark { get; set; }                   // Remark — ghi chú
+    public DateTime? ApproveDTime { get; set; }           // mốc duyệt
+    public DateTime? CancelDTime { get; set; }            // mốc huỷ
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public List<TraceTemplateCte> Ctes { get; set; } = new();
+    public List<TraceTemplateKde> Kdes { get; set; } = new();
+    public List<TraceTemplateCteKde> CteKdes { get; set; } = new();
+}
+
+// Sự kiện (CTE) trong 1 mẫu truy xuất — port từ TplNWT_Mst_CTE của InBrand.
+public class TraceTemplateCte : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int TemplateId { get; set; }
+    public TraceTemplate? Template { get; set; }
+    public string Code { get; set; } = "";               // CTECode — mã sự kiện
+    public string Name { get; set; } = "";               // CTEDesc — mô tả sự kiện
+    public string? ApiLink { get; set; }                  // APIsLink — liên kết API (nếu có)
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Thành phần dữ liệu (KDE) trong 1 mẫu truy xuất — port từ TplNWT_Mst_KDE của InBrand.
+public class TraceTemplateKde : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int TemplateId { get; set; }
+    public TraceTemplate? Template { get; set; }
+    public string Code { get; set; } = "";               // KDECode — mã thành phần
+    public string Name { get; set; } = "";               // KDEDesc — mô tả thành phần
+    public string? DataType { get; set; }                 // DataType — kiểu dữ liệu (TEXT/NUMBER/DATE…)
+    public string? RefNoList { get; set; }                // RefNoList — danh sách chọn sẵn
+    public bool FlagList { get; set; }                    // FlagList — là danh sách
+    public bool FlagQuery { get; set; }                   // FlagQuery — dùng để truy vấn
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Gán KDE vào CTE trong 1 mẫu truy xuất — port từ TplNWT_CTE_KDE của InBrand.
+// Luật: 1 cặp (CTE, KDE) chỉ gán 1 lần trong 1 mẫu.
+public class TraceTemplateCteKde : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int TemplateId { get; set; }
+    public TraceTemplate? Template { get; set; }
+    public string CteCode { get; set; } = "";            // CTECode
+    public string KdeCode { get; set; } = "";            // KDECode
+    public string? ApiLink { get; set; }                  // APIsLink
+    public bool FlagOsOrgView { get; set; }               // FlagOSOrgView — hiển thị trên cổng tổ chức
+    public bool FlagKey { get; set; }                     // FlagKey — là khoá
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

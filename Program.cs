@@ -32,6 +32,7 @@ builder.Services.AddScoped<IPackingService, PackingService>();
 builder.Services.AddScoped<ISearchLogService, SearchLogService>();
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IDealerService, DealerService>();
+builder.Services.AddScoped<ITraceTemplateService, TraceTemplateService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -598,6 +599,65 @@ app.MapDelete("/api/dealers/{id:int}", async (int id, IDealerService svc) =>
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
+// Mẫu truy xuất (TemplateNWType) — port từ Mst_TemplateNWType / TplNWT_Mst_CTE / TplNWT_Mst_KDE / TplNWT_CTE_KDE của InBrand (module eTemNN).
+// Một mẫu định nghĩa bộ sự kiện (CTE) + thành phần dữ liệu (KDE) + gán CTE-KDE; vòng đời PENDING → APPROVE → CANCEL.
+app.MapGet("/api/trace-templates", async (string? q, TraceTemplateStatus? status, ITraceTemplateService svc) =>
+    Results.Ok((await svc.ListAsync(q, status)).Select(v => new
+    {
+        v.Template.Id, v.Template.Code, v.Template.Name, status = v.Template.Status.ToString(),
+        v.Template.Remark, v.CteCount, v.KdeCount, v.CteKdeCount, v.Template.CreatedAt
+    })));
+
+app.MapGet("/api/trace-templates/{id:int}", async (int id, ITraceTemplateService svc) =>
+{
+    var d = await svc.GetAsync(id);
+    if (d == null) return Results.NotFound(new { error = "Không tìm thấy mẫu truy xuất." });
+    return Results.Ok(new
+    {
+        d.Template.Id, d.Template.Code, d.Template.Name, status = d.Template.Status.ToString(),
+        d.Template.Remark, d.Template.ApproveDTime, d.Template.CancelDTime,
+        ctes = d.Ctes.Select(c => new { c.Code, c.Name, c.ApiLink, c.Active }),
+        kdes = d.Kdes.Select(k => new { k.Code, k.Name, k.DataType, k.RefNoList, k.FlagList, k.FlagQuery, k.Active }),
+        cteKdes = d.CteKdes.Select(m => new { m.CteCode, m.KdeCode, m.ApiLink, m.FlagOsOrgView, m.FlagKey })
+    });
+});
+
+app.MapPost("/api/trace-templates", async (TraceTemplateReq r, ITraceTemplateService svc) =>
+{
+    var ctes = (r.Ctes ?? new()).Select(c => new TraceCteInput(c.Code ?? "", c.Name ?? "", c.ApiLink)).ToList();
+    var kdes = (r.Kdes ?? new()).Select(k => new TraceKdeInput(k.Code ?? "", k.Name ?? "", k.DataType, k.RefNoList, k.FlagList, k.FlagQuery)).ToList();
+    var maps = (r.CteKdes ?? new()).Select(m => new TraceCteKdeInput(m.CteCode ?? "", m.KdeCode ?? "", m.ApiLink, m.FlagOsOrgView, m.FlagKey)).ToList();
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.Remark, ctes, kdes, maps);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/trace-templates/{id:int}", async (int id, TraceTemplateReq r, ITraceTemplateService svc) =>
+{
+    var ctes = (r.Ctes ?? new()).Select(c => new TraceCteInput(c.Code ?? "", c.Name ?? "", c.ApiLink)).ToList();
+    var kdes = (r.Kdes ?? new()).Select(k => new TraceKdeInput(k.Code ?? "", k.Name ?? "", k.DataType, k.RefNoList, k.FlagList, k.FlagQuery)).ToList();
+    var maps = (r.CteKdes ?? new()).Select(m => new TraceCteKdeInput(m.CteCode ?? "", m.KdeCode ?? "", m.ApiLink, m.FlagOsOrgView, m.FlagKey)).ToList();
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.Remark, ctes, kdes, maps);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/trace-templates/{id:int}/approve", async (int id, ITraceTemplateService svc) =>
+{
+    var (ok, msg) = await svc.ApproveAsync(id);
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/trace-templates/{id:int}/cancel", async (int id, ITraceTemplateService svc) =>
+{
+    var (ok, msg) = await svc.CancelAsync(id);
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/trace-templates/{id:int}", async (int id, ITraceTemplateService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Name)) return Results.BadRequest(new { error = "Cần Name." });
@@ -706,3 +766,7 @@ record BomReq(string? Code, int ParentProductId, int BomTypeId, bool IsDefault, 
 record BomUpdateReq(bool IsDefault, string? Remark);
 record DealerTypeReq(string? Code, string? Name, bool Active = true);
 record DealerReq(string? Code, string? Name, int? ParentId, int? DealerTypeId, string? InvCode, string? MaterialTypeCode, string? SkycicSiteID, string? Remark, bool Active = true);
+record TraceCteReq(string? Code, string? Name, string? ApiLink);
+record TraceKdeReq(string? Code, string? Name, string? DataType, string? RefNoList, bool FlagList = false, bool FlagQuery = false);
+record TraceCteKdeReq(string? CteCode, string? KdeCode, string? ApiLink, bool FlagOsOrgView = false, bool FlagKey = false);
+record TraceTemplateReq(string? Code, string? Name, string? Remark, List<TraceCteReq>? Ctes, List<TraceKdeReq>? Kdes, List<TraceCteKdeReq>? CteKdes);

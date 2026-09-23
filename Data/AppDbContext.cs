@@ -35,6 +35,10 @@ public class AppDbContext : DbContext
     public DbSet<BomLine> BomLines => Set<BomLine>();
     public DbSet<DealerType> DealerTypes => Set<DealerType>();
     public DbSet<Dealer> Dealers => Set<Dealer>();
+    public DbSet<TraceTemplate> TraceTemplates => Set<TraceTemplate>();
+    public DbSet<TraceTemplateCte> TraceTemplateCtes => Set<TraceTemplateCte>();
+    public DbSet<TraceTemplateKde> TraceTemplateKdes => Set<TraceTemplateKde>();
+    public DbSet<TraceTemplateCteKde> TraceTemplateCteKdes => Set<TraceTemplateCteKde>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -152,6 +156,25 @@ public class AppDbContext : DbContext
             e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã đại lý duy nhất theo tenant
             e.HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId);
             e.HasOne(x => x.DealerType).WithMany().HasForeignKey(x => x.DealerTypeId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<TraceTemplate>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<TraceTemplateCte>(e =>
+        {
+            e.HasIndex(x => new { x.TemplateId, x.Code }).IsUnique();   // 1 mã CTE chỉ xuất hiện 1 lần trong 1 mẫu
+            e.HasOne(x => x.Template).WithMany(x => x.Ctes).HasForeignKey(x => x.TemplateId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<TraceTemplateKde>(e =>
+        {
+            e.HasIndex(x => new { x.TemplateId, x.Code }).IsUnique();   // 1 mã KDE chỉ xuất hiện 1 lần trong 1 mẫu
+            e.HasOne(x => x.Template).WithMany(x => x.Kdes).HasForeignKey(x => x.TemplateId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<TraceTemplateCteKde>(e =>
+        {
+            e.HasIndex(x => new { x.TemplateId, x.CteCode, x.KdeCode }).IsUnique();   // 1 cặp CTE-KDE chỉ gán 1 lần
+            e.HasOne(x => x.Template).WithMany(x => x.CteKdes).HasForeignKey(x => x.TemplateId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }

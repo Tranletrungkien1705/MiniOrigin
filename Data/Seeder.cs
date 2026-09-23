@@ -169,6 +169,20 @@ public static class Seeder
                 new Dealer { Code = "DL-HCM-Q1", Name = "Cửa hàng Quận 1", ParentId = dlRoot.Id, DealerTypeId = dtBanLe.Id, Active = true },
                 new Dealer { Code = "DL-HN", Name = "Đại lý Hà Nội", DealerTypeId = dtCap1.Id, Active = true });
             await db.SaveChangesAsync();
+
+            // Mẫu truy xuất demo — port từ Mst_TemplateNWType / TplNWT_Mst_CTE / TplNWT_Mst_KDE / TplNWT_CTE_KDE của InBrand.
+            var tpl = new TraceTemplate { Code = "FRUIT", Name = "Mẫu truy xuất nông sản", Status = TraceTemplateStatus.Pending, Remark = "Bộ sự kiện + thành phần cho chuỗi nông sản" };
+            db.TraceTemplates.Add(tpl); await db.SaveChangesAsync();
+            db.TraceTemplateCtes.AddRange(
+                new TraceTemplateCte { TemplateId = tpl.Id, Code = "HARVEST", Name = "Thu hoạch", Active = true },
+                new TraceTemplateCte { TemplateId = tpl.Id, Code = "PACK", Name = "Đóng gói", Active = true });
+            db.TraceTemplateKdes.AddRange(
+                new TraceTemplateKde { TemplateId = tpl.Id, Code = "FIELD", Name = "Thửa ruộng", DataType = "TEXT", Active = true },
+                new TraceTemplateKde { TemplateId = tpl.Id, Code = "PACKSIZE", Name = "Quy cách", DataType = "NUMBER", Active = true });
+            db.TraceTemplateCteKdes.AddRange(
+                new TraceTemplateCteKde { TemplateId = tpl.Id, CteCode = "HARVEST", KdeCode = "FIELD", FlagKey = true },
+                new TraceTemplateCteKde { TemplateId = tpl.Id, CteCode = "PACK", KdeCode = "PACKSIZE" });
+            await db.SaveChangesAsync();
         }
     }
 
@@ -184,7 +198,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "PartUnits", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "PartUnits", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers", "TraceTemplates", "TraceTemplateCtes", "TraceTemplateKdes", "TraceTemplateCteKdes" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };
