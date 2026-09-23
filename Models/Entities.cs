@@ -101,6 +101,32 @@ public class LotLink : IOrgOwned
     public decimal? Quantity { get; set; }
 }
 
+// Đơn vị sản phẩm (serial) — đơn vị xác thực chính hãng theo Serial + mã bí mật (PIN)
+// Port từ Inv_InventoryBalanceSerial / Inv_InventorySecret của InBrand (module BrandPositioning).
+public class ProductUnit : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string SerialNo { get; set; } = "";            // SerialNo_Actual — số serial thực tế in trên tem/QR
+    public string SecretNo { get; set; } = "";            // SecretNo — mã bí mật (PIN) để xác thực
+    public int? ProductId { get; set; }
+    public Product? Product { get; set; }
+    public string ProductName { get; set; } = "";
+    public int? BrandId { get; set; }                     // thương hiệu của đơn vị (nguồn gốc thương hiệu)
+    public Brand? Brand { get; set; }
+    public string? LotCode { get; set; }                  // FGLotNo — mã lô thành phẩm
+    public string? Origin { get; set; }                   // xuất xứ
+    public DateTime? WarrantyDateStart { get; set; }      // ngày kích hoạt bảo hành (lần xác thực đầu)
+    public int WarrantyMonths { get; set; }               // thời hạn bảo hành (tháng)
+    public bool Activated { get; set; }                   // đã kích hoạt bảo hành chưa
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerAddress { get; set; }
+    public DateTime? ActivatedAt { get; set; }
+    public int VerifyCount { get; set; }                  // số lần đã xác thực
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

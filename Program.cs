@@ -21,6 +21,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
+builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -90,6 +91,42 @@ app.MapDelete("/api/brands/{id:int}", async (int id, IBrandService svc) =>
 {
     var (ok, msg) = await svc.DeleteAsync(id);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Xác thực sản phẩm chính hãng (nguồn gốc thương hiệu) — port từ module BrandPositioning của InBrand.
+// Tra cứu công khai theo serial (không lộ mã bí mật).
+app.MapGet("/api/authenticity/{serial}", async (string serial, IAuthenticityService svc) =>
+{
+    var u = await svc.LookupAsync(serial);
+    return u == null ? Results.NotFound(new { error = "Không tìm thấy sản phẩm." }) : Results.Ok(u);
+});
+
+// Xác thực cặp Serial + mã bí mật (PIN).
+app.MapPost("/api/authenticity/verify", async (VerifyReq r, IAuthenticityService svc) =>
+{
+    var res = await svc.VerifyAsync(r.Serial ?? "", r.Pin ?? "");
+    return res.Ok ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+// Kích hoạt bảo hành (lần xác thực đầu) + ghi thông tin khách hàng.
+app.MapPost("/api/authenticity/activate", async (ActivateReq r, IAuthenticityService svc) =>
+{
+    var res = await svc.ActivateAsync(r.Serial ?? "", r.Pin ?? "", r.CustomerName, r.Phone, r.Address);
+    return res.Ok ? Results.Ok(res) : Results.BadRequest(res);
+});
+
+// Danh sách đơn vị sản phẩm (admin).
+app.MapGet("/api/units", async (string? q, IAuthenticityService svc) =>
+    Results.Ok((await svc.ListAsync(q)).Select(u => new
+    {
+        u.Id, u.SerialNo, u.ProductName, brand = u.Brand?.Name, u.LotCode, u.Origin,
+        u.Activated, u.WarrantyDateStart, u.WarrantyMonths, u.VerifyCount
+    })));
+
+app.MapPost("/api/units", async (UnitReq r, IAuthenticityService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Serial ?? "", r.Pin ?? "", r.ProductId, r.BrandId, r.LotCode, r.Origin, r.WarrantyMonths);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
 });
 
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
@@ -172,6 +209,9 @@ app.Run();
 
 record RegisterOrgDto(string Name);
 record BrandReq(string? Code, string? Name, bool Active = true);
+record VerifyReq(string? Serial, string? Pin);
+record ActivateReq(string? Serial, string? Pin, string? CustomerName, string? Phone, string? Address);
+record UnitReq(string? Serial, string? Pin, int? ProductId, int? BrandId, string? LotCode, string? Origin, int WarrantyMonths = 12);
 record ImportGlnDto(string? Code, string? Name, string? Address);
 record ImportOriginProdDto(string? Code, string? Name, string? Unit);
 record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);

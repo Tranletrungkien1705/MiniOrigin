@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Lot> Lots => Set<Lot>();
     public DbSet<LotLink> LotLinks => Set<LotLink>();
     public DbSet<TraceEvent> Events => Set<TraceEvent>();
+    public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -54,6 +55,13 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => x.LotId);
             e.HasOne(x => x.Lot).WithMany(x => x.Events).HasForeignKey(x => x.LotId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<ProductUnit>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.SerialNo }).IsUnique();   // serial duy nhất theo tenant
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId);
+            e.HasOne(x => x.Brand).WithMany().HasForeignKey(x => x.BrandId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }

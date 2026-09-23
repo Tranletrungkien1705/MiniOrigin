@@ -148,6 +148,51 @@ public class TraceController(IOriginService svc) : Controller
     }
 }
 
+public class AuthenticityController(IAuthenticityService svc, IOriginService origin) : Controller
+{
+    // Trang xác thực công khai: nhập serial + mã bí mật.
+    [Route("Verify/{serial?}")]
+    public async Task<IActionResult> Index(string? serial)
+    {
+        ViewBag.Serial = serial;
+        if (!string.IsNullOrWhiteSpace(serial)) ViewBag.Lookup = await svc.LookupAsync(serial);
+        return View();
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Verify(string serial, string pin)
+    {
+        var res = await svc.VerifyAsync(serial ?? "", pin ?? "");
+        ViewBag.Serial = serial; ViewBag.Result = res;
+        ViewBag.Lookup = await svc.LookupAsync(serial ?? "");
+        return View(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Activate(string serial, string pin, string? customerName, string? phone, string? address)
+    {
+        var res = await svc.ActivateAsync(serial ?? "", pin ?? "", customerName, phone, address);
+        TempData[res.Ok ? "Success" : "Error"] = res.Message;
+        return RedirectToAction(nameof(Index), new { serial });
+    }
+
+    // Quản trị danh sách đơn vị sản phẩm.
+    public async Task<IActionResult> Units(string? q)
+    {
+        ViewBag.Q = q;
+        ViewBag.Products = await origin.ProductsAsync();
+        return View(await svc.ListAsync(q));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string serial, string pin, int? productId, int? brandId, string? lotCode, string? origin, int warrantyMonths = 12)
+    {
+        var (ok, msg, _) = await svc.CreateAsync(serial, pin, productId, brandId, lotCode, origin, warrantyMonths);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Units));
+    }
+}
+
 public class OrgController(AppDbContext db) : Controller
 {
     public async Task<IActionResult> Index()

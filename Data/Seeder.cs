@@ -40,6 +40,13 @@ public static class Seeder
                 new Brand { Code = "SANFI", Name = "Sanfi", Active = true });
             await db.SaveChangesAsync();
 
+            // Đơn vị sản phẩm xác thực chính hãng — port từ Inv_InventoryBalanceSerial/Inv_InventorySecret.
+            var viglacera = db.Brands.Local.First(b => b.Code == "VIGLACERA");
+            db.ProductUnits.AddRange(
+                new ProductUnit { SerialNo = "VGC-2026-0001", SecretNo = "482913", ProductName = "Gạch Granite 60x60", BrandId = viglacera.Id, LotCode = "GAO-ST25-2026-A", Origin = "Việt Nam", WarrantyMonths = 24 },
+                new ProductUnit { SerialNo = "VGC-2026-0002", SecretNo = "771204", ProductName = "Gạch Granite 60x60", BrandId = viglacera.Id, LotCode = "GAO-ST25-2026-A", Origin = "Việt Nam", WarrantyMonths = 24 });
+            await db.SaveChangesAsync();
+
             // Lô nguyên liệu: lúa tươi từ trang trại
             var raw = new Lot { Code = "LUA-DT-2026-001", ProductName = "Lúa tươi ST25", Unit = "kg", Quantity = 5000, OriginGlnId = farm.Id, Status = LotStatus.Shipped };
             db.Lots.Add(raw); await db.SaveChangesAsync();
@@ -72,7 +79,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

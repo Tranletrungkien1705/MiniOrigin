@@ -1,0 +1,72 @@
+@{
+    ViewData["Title"] = "Xác thực sản phẩm chính hãng";
+    var serial = (string?)ViewBag.Serial;
+    var lookup = ViewBag.Lookup as UnitLookup;
+    var result = ViewBag.Result as VerifyResult;
+}
+<div class="row g-3">
+    <div class="col-lg-7"><div class="card"><div class="card-body">
+        <p class="text-muted small">Nhập số serial in trên tem/QR và mã bí mật (PIN) để kiểm tra sản phẩm chính hãng — nguồn gốc thương hiệu.</p>
+        <form asp-action="Verify" method="post" class="row g-2 mb-3">@Html.AntiForgeryToken()
+            <div class="col-sm-6"><input name="serial" value="@serial" class="form-control" placeholder="Số serial (VD VGC-2026-0001) *" required /></div>
+            <div class="col-sm-4"><input name="pin" class="form-control" placeholder="Mã bí mật (PIN) *" required /></div>
+            <div class="col-sm-2"><button class="btn btn-primary w-100"><i class="bi bi-shield-check me-1"></i>Xác thực</button></div>
+        </form>
+
+        @if (result != null)
+        {
+            <div class="alert @(result.Ok ? "alert-success" : "alert-danger")">
+                <i class="bi @(result.Ok ? "bi-patch-check-fill" : "bi-x-octagon-fill") me-2"></i>@result.Message
+            </div>
+        }
+
+        @if (lookup != null)
+        {
+            <table class="table table-sm align-middle mb-0">
+                <tbody>
+                    <tr><th style="width:180px">Sản phẩm</th><td>@lookup.ProductName</td></tr>
+                    <tr><th>Thương hiệu</th><td>@(lookup.BrandName ?? "—")</td></tr>
+                    <tr><th>Mã lô thành phẩm</th><td>@(lookup.LotCode ?? "—")</td></tr>
+                    <tr><th>Xuất xứ</th><td>@(lookup.Origin ?? "—")</td></tr>
+                    <tr><th>Trạng thái bảo hành</th><td>
+                        @if (lookup.Activated)
+                        {
+                            <span class="badge bg-success">Đã kích hoạt</span>
+                            <span class="ms-2 small text-muted">@lookup.WarrantyDateStart?.ToString("dd/MM/yyyy") → @lookup.WarrantyDateEnd?.ToString("dd/MM/yyyy")</span>
+                        }
+                        else { <span class="badge bg-secondary">Chưa kích hoạt</span> }
+                    </td></tr>
+                    <tr><th>Số lần xác thực</th><td>@lookup.VerifyCount</td></tr>
+                </tbody>
+            </table>
+        }
+        else if (!string.IsNullOrWhiteSpace(serial))
+        {
+            <div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Không tìm thấy sản phẩm với số serial này.</div>
+        }
+    </div></div></div>
+
+    <div class="col-lg-5"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-patch-check me-1"></i>Kích hoạt bảo hành</h6>
+        @if (lookup != null && !lookup.Activated)
+        {
+            <form asp-action="Activate" method="post">@Html.AntiForgeryToken()
+                <input type="hidden" name="serial" value="@lookup.SerialNo" />
+                <div class="mb-2"><input name="pin" class="form-control" placeholder="Mã bí mật (PIN) *" required /></div>
+                <div class="mb-2"><input name="customerName" class="form-control" placeholder="Tên khách hàng" /></div>
+                <div class="mb-2"><input name="phone" class="form-control" placeholder="Số điện thoại" /></div>
+                <div class="mb-3"><input name="address" class="form-control" placeholder="Địa chỉ" /></div>
+                <button class="btn btn-primary w-100"><i class="bi bi-check2-circle me-1"></i>Kích hoạt</button>
+            </form>
+        }
+        else if (lookup != null)
+        {
+            <div class="text-muted small">Sản phẩm đã được kích hoạt bảo hành. Không cần kích hoạt lại.</div>
+        }
+        else
+        {
+            <div class="text-muted small">Tra cứu serial trước để kích hoạt bảo hành.</div>
+        }
+        <div class="small text-muted mt-3">Lần xác thực đầu tiên sẽ ghi nhận ngày bắt đầu bảo hành và thông tin khách hàng — như luồng ActivePIN của InBrand.</div>
+    </div></div></div>
+</div>
