@@ -101,6 +101,19 @@ public class MaterialType : IOrgOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Nhà cung cấp (master) — port từ Mst_Supplier của InBrand.
+// Đối tác cung cấp nguyên vật liệu/hàng hoá; SupType mặc định NORMAL khi tạo.
+public class Supplier : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // SupCode — mã nhà cung cấp (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // SupName — tên nhà cung cấp
+    public string Type { get; set; } = "NORMAL";         // SupType — loại nhà cung cấp (mặc định NORMAL)
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Danh mục Màu sắc sản phẩm — port từ Mst_PartColor của InBrand.
 // Màu sắc là thuộc tính nguồn gốc thương hiệu của sản phẩm (VD Trắng bóng, Xám mờ).
 public class ProductColor : IOrgOwned

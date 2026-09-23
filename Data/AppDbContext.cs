@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<WarrantyType> WarrantyTypes => Set<WarrantyType>();
     public DbSet<MaterialType> MaterialTypes => Set<MaterialType>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductColor> ProductColors => Set<ProductColor>();
     public DbSet<ProductColorMap> ProductColorMaps => Set<ProductColorMap>();
@@ -46,6 +47,7 @@ public class AppDbContext : DbContext
         b.Entity<Brand>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
         b.Entity<WarrantyType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
         b.Entity<MaterialType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<Supplier>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
         b.Entity<Product>(e =>
         {
             e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();
