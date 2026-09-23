@@ -1,0 +1,48 @@
+@{
+    ViewData["Title"] = "Tra cứu mã hộp";
+    var code = (string?)ViewBag.Code;
+    var lookup = ViewBag.Lookup as BoxLookup;
+}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card mb-3"><div class="card-body">
+            <h5 class="fw-bold mb-3"><i class="bi bi-box-seam me-2"></i>Tra cứu mã hộp</h5>
+            <form method="get" class="row g-2">
+                <div class="col-sm-9"><input name="code" value="@code" class="form-control" placeholder="Nhập mã hộp (BoxNo)" /></div>
+                <div class="col-sm-3"><button class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Tra cứu</button></div>
+            </form>
+        </div></div>
+
+        @if (!string.IsNullOrWhiteSpace(code))
+        {
+            if (lookup == null)
+            {
+                <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i>Mã hộp này không tồn tại trên hệ thống.</div>
+            }
+            else
+            {
+                <div class="card"><div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Hộp <code>@lookup.Code</code></h6>
+                        <span class="badge bg-success">@lookup.ItemCount sản phẩm</span>
+                    </div>
+                    @if (lookup.CanCode != null) { <div class="small text-muted mb-2">Thuộc thùng: <code>@lookup.CanCode</code></div> }
+                    <table class="table table-hover align-middle mb-0">
+                        <thead><tr><th>Serial</th><th>Sản phẩm</th><th>Thời điểm đóng</th></tr></thead>
+                        <tbody>
+                        @foreach (var i in lookup.Items)
+                        {
+                            <tr>
+                                <td class="small"><code>@i.SerialNo</code></td>
+                                <td class="small">@(i.ProductName ?? "—")</td>
+                                <td class="small text-muted">@i.PackedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                        }
+                        @if (lookup.Items.Count == 0) { <tr><td colspan="3" class="text-center text-muted py-4">Hộp chưa có sản phẩm.</td></tr> }
+                        </tbody>
+                    </table>
+                </div></div>
+            }
+        }
+    </div>
+</div>

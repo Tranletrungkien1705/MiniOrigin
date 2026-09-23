@@ -242,6 +242,72 @@ public class VerifyBatchController(IVerifyBatchService svc) : Controller
     }
 }
 
+public class PackingController(IPackingService svc) : Controller
+{
+    // Quản trị đóng hộp / đóng thùng — port từ module Box/Can của InBrand.
+    public async Task<IActionResult> Index(string? q)
+    {
+        ViewBag.Q = q;
+        ViewBag.Cans = await svc.ListCansAsync(null);
+        return View(await svc.ListBoxesAsync(q));
+    }
+
+    public async Task<IActionResult> Detail(int id)
+    {
+        var s = await svc.GetBoxAsync(id);
+        return s == null ? NotFound() : View(s);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, string? secretNo, string? remark)
+    {
+        var (ok, msg, id) = await svc.CreateBoxAsync(code, secretNo, remark);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return ok ? RedirectToAction(nameof(Detail), new { id }) : RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pack(int id, string serialNo)
+    {
+        var (ok, msg) = await svc.PackSerialAsync(id, serialNo);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Unpack(int id, string serialNo)
+    {
+        var (ok, msg) = await svc.UnpackSerialAsync(id, serialNo);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> PackIntoCan(int id, string boxCode)
+    {
+        var (ok, msg) = await svc.PackBoxAsync(id, boxCode);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateCan(string code, string? secretNo, string? remark)
+    {
+        var (ok, msg, _) = await svc.CreateCanAsync(code, secretNo, remark);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    // Tra cứu công khai theo mã hộp (giống BoxController của InBrand).
+    [Route("Box/{code?}")]
+    public async Task<IActionResult> Lookup(string? code)
+    {
+        ViewBag.Code = code;
+        if (!string.IsNullOrWhiteSpace(code)) ViewBag.Lookup = await svc.LookupBoxAsync(code);
+        return View();
+    }
+}
+
 public class OrgController(AppDbContext db) : Controller
 {
     public async Task<IActionResult> Index()

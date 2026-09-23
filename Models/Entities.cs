@@ -170,6 +170,48 @@ public class VerifyBatchItem : IOrgOwned
     public DateTime ScannedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Hộp (Box) — đóng gói nhiều đơn vị sản phẩm (serial) vào 1 hộp.
+// Port từ Inv_InventoryBox của InBrand (BoxNo + SecretNo; cờ FlagBox trên Inv_InventoryBalanceSerial).
+public class Box : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // BoxNo — mã hộp (duy nhất theo tenant)
+    public string? SecretNo { get; set; }                 // mã bí mật của hộp (nếu có)
+    public string? Remark { get; set; }
+    public int? CanId { get; set; }                       // thùng chứa hộp này (nếu đã đóng thùng)
+    public Can? Can { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public List<BoxItem> Items { get; set; } = new();
+}
+
+// Thùng (Can) — đóng gói nhiều hộp vào 1 thùng.
+// Port từ Inv_InventoryCan của InBrand (CanNo; cờ FlagCan trên Inv_InventoryBalanceSerial).
+public class Can : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // CanNo — mã thùng (duy nhất theo tenant)
+    public string? SecretNo { get; set; }
+    public string? Remark { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public List<Box> Boxes { get; set; } = new();
+}
+
+// Đơn vị sản phẩm (serial) nằm trong 1 hộp — port từ quan hệ BoxNo trên Inv_InventoryBalanceSerial.
+public class BoxItem : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int BoxId { get; set; }
+    public Box? Box { get; set; }
+    public string SerialNo { get; set; } = "";            // SerialNo_Actual của đơn vị được đóng vào hộp
+    public string? ProductName { get; set; }
+    public DateTime PackedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

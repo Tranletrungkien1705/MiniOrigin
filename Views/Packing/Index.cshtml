@@ -1,0 +1,63 @@
+@model List<BoxSummary>
+@{
+    ViewData["Title"] = "Đóng hộp / Đóng thùng";
+    var q = (string?)ViewBag.Q;
+    var cans = (List<CanSummary>)ViewBag.Cans;
+}
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <p class="text-muted small">Đóng hộp — gom nhiều đơn vị sản phẩm (serial) vào 1 hộp; đóng thùng — gom nhiều hộp vào 1 thùng. Port từ module Box/Can của InBrand.</p>
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-sm-9"><input name="q" value="@q" class="form-control form-control-sm" placeholder="Tìm mã hộp" /></div>
+            <div class="col-sm-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Lọc</button></div>
+        </form>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã hộp</th><th class="text-center">Số serial</th><th>Thùng chứa</th><th>Ghi chú</th></tr></thead>
+            <tbody>
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <td class="fw-semibold small"><a href="/Packing/Detail/@s.Box.Id"><code>@s.Box.Code</code></a></td>
+                    <td class="text-center"><span class="badge bg-success">@s.ItemCount</span></td>
+                    <td class="small">@(s.CanCode ?? "—")</td>
+                    <td class="small text-muted">@(s.Box.Remark ?? "—")</td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="4" class="text-center text-muted py-4">Chưa có hộp nào.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4">
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Tạo hộp</h6>
+            <form asp-action="Create" method="post">@Html.AntiForgeryToken()
+                <div class="mb-2"><input name="code" class="form-control" placeholder="Mã hộp (BoxNo) *" required /></div>
+                <div class="mb-2"><input name="secretNo" class="form-control" placeholder="Mã bí mật" /></div>
+                <div class="mb-3"><input name="remark" class="form-control" placeholder="Ghi chú" /></div>
+                <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Tạo hộp</button>
+            </form>
+            <div class="small text-muted mt-3">Sau khi tạo, mở chi tiết để đóng serial vào hộp.</div>
+        </div></div>
+        <div class="card"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thùng (Can)</h6>
+            <table class="table table-sm align-middle mb-2">
+                <thead><tr><th>Mã thùng</th><th class="text-center">Hộp</th><th class="text-center">Serial</th></tr></thead>
+                <tbody>
+                @foreach (var c in cans)
+                {
+                    <tr>
+                        <td class="small"><code>@c.Can.Code</code></td>
+                        <td class="text-center small">@c.BoxCount</td>
+                        <td class="text-center small">@c.ItemCount</td>
+                    </tr>
+                }
+                @if (cans.Count == 0) { <tr><td colspan="3" class="text-center text-muted py-3">Chưa có thùng.</td></tr> }
+                </tbody>
+            </table>
+            <form asp-action="CreateCan" method="post">@Html.AntiForgeryToken()
+                <div class="mb-2"><input name="code" class="form-control form-control-sm" placeholder="Mã thùng (CanNo) *" required /></div>
+                <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus-lg me-1"></i>Tạo thùng</button>
+            </form>
+        </div></div>
+    </div>
+</div>

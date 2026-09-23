@@ -78,6 +78,19 @@ public static class Seeder
                 new VerifyBatchItem { BatchId = batch.Id, IdNo = "VGC-2026-0002", ProductName = "Gạch Granite 60x60", BoxNo = "BOX-01", CustomerName = "Đại lý HCM" });
             batch.QtyInit = 2; batch.QtyVerified = 2;
             await db.SaveChangesAsync();
+
+            // Đóng hộp / đóng thùng demo — port từ module Box/Can của InBrand.
+            var box = new Box { Code = "BOX-VGC-0001", SecretNo = "BOXSEC01", Remark = "Hộp gạch Granite 60x60" };
+            db.Boxes.Add(box); await db.SaveChangesAsync();
+            db.BoxItems.AddRange(
+                new BoxItem { BoxId = box.Id, SerialNo = "VGC-2026-0001", ProductName = "Gạch Granite 60x60" },
+                new BoxItem { BoxId = box.Id, SerialNo = "VGC-2026-0002", ProductName = "Gạch Granite 60x60" });
+            await db.SaveChangesAsync();
+
+            var can = new Can { Code = "CAN-VGC-0001", SecretNo = "CANSEC01", Remark = "Thùng gạch Granite 60x60" };
+            db.Cans.Add(can); await db.SaveChangesAsync();
+            box.CanId = can.Id;
+            await db.SaveChangesAsync();
         }
     }
 
@@ -93,7 +106,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

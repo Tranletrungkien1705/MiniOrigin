@@ -23,6 +23,7 @@ builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
+builder.Services.AddScoped<IPackingService, PackingService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -179,6 +180,84 @@ app.MapPost("/api/verify-batches/{id:int}/cancel", async (int id, IVerifyBatchSe
     return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
 });
 
+// Đóng hộp / Đóng thùng (packing) — port từ module Box/Can của InBrand.
+// Tra cứu công khai theo mã hộp: trả về danh sách serial bên trong.
+app.MapGet("/api/boxes/lookup/{code}", async (string code, IPackingService svc) =>
+{
+    var b = await svc.LookupBoxAsync(code);
+    return b == null ? Results.NotFound(new { error = "Không tìm thấy mã hộp." }) : Results.Ok(b);
+});
+
+app.MapGet("/api/boxes", async (string? q, IPackingService svc) =>
+    Results.Ok((await svc.ListBoxesAsync(q)).Select(s => new
+    {
+        s.Box.Id, s.Box.Code, s.Box.SecretNo, s.Box.Remark, canCode = s.CanCode, s.ItemCount, s.Box.CreatedAt
+    })));
+
+app.MapGet("/api/boxes/{id:int}", async (int id, IPackingService svc) =>
+{
+    var s = await svc.GetBoxAsync(id);
+    if (s == null) return Results.NotFound(new { error = "Không tìm thấy hộp." });
+    return Results.Ok(new
+    {
+        s.Box.Id, s.Box.Code, s.Box.SecretNo, s.Box.Remark, canCode = s.CanCode, s.ItemCount,
+        items = s.Box.Items.Select(i => new { i.SerialNo, i.ProductName, i.PackedAt })
+    });
+});
+
+app.MapPost("/api/boxes", async (BoxReq r, IPackingService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateBoxAsync(r.Code ?? "", r.SecretNo, r.Remark);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/boxes/{id:int}/pack", async (int id, PackSerialReq r, IPackingService svc) =>
+{
+    var (ok, msg) = await svc.PackSerialAsync(id, r.SerialNo ?? "");
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/boxes/{id:int}/unpack", async (int id, PackSerialReq r, IPackingService svc) =>
+{
+    var (ok, msg) = await svc.UnpackSerialAsync(id, r.SerialNo ?? "");
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapGet("/api/cans", async (string? q, IPackingService svc) =>
+    Results.Ok((await svc.ListCansAsync(q)).Select(s => new
+    {
+        s.Can.Id, s.Can.Code, s.Can.SecretNo, s.Can.Remark, s.BoxCount, s.ItemCount, s.Can.CreatedAt
+    })));
+
+app.MapGet("/api/cans/{id:int}", async (int id, IPackingService svc) =>
+{
+    var s = await svc.GetCanAsync(id);
+    if (s == null) return Results.NotFound(new { error = "Không tìm thấy thùng." });
+    return Results.Ok(new
+    {
+        s.Can.Id, s.Can.Code, s.Can.SecretNo, s.Can.Remark, s.BoxCount, s.ItemCount,
+        boxes = s.Can.Boxes.Select(b => new { b.Id, b.Code, itemCount = b.Items.Count })
+    });
+});
+
+app.MapPost("/api/cans", async (CanReq r, IPackingService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateCanAsync(r.Code ?? "", r.SecretNo, r.Remark);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/cans/{id:int}/pack", async (int id, PackBoxReq r, IPackingService svc) =>
+{
+    var (ok, msg) = await svc.PackBoxAsync(id, r.BoxCode ?? "");
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPost("/api/cans/{id:int}/unpack", async (int id, PackBoxReq r, IPackingService svc) =>
+{
+    var (ok, msg) = await svc.UnpackBoxAsync(id, r.BoxCode ?? "");
+    return ok ? Results.Ok(new { ok, message = msg }) : Results.BadRequest(new { error = msg });
+});
+
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Name)) return Results.BadRequest(new { error = "Cần Name." });
@@ -264,6 +343,10 @@ record ActivateReq(string? Serial, string? Pin, string? CustomerName, string? Ph
 record UnitReq(string? Serial, string? Pin, int? ProductId, int? BrandId, string? LotCode, string? Origin, int WarrantyMonths = 12);
 record VerifyBatchReq(string? ProductName, string? RefNo, string? RefNoSys, string? TransportType, string? PlateNo, string? ReceivePlace, string? InvOutType, int QtyPlan);
 record ScanReq(string? IdNo, string? Pin, string? BoxNo, string? CustomerName);
+record BoxReq(string? Code, string? SecretNo, string? Remark);
+record PackSerialReq(string? SerialNo);
+record CanReq(string? Code, string? SecretNo, string? Remark);
+record PackBoxReq(string? BoxCode);
 record ImportGlnDto(string? Code, string? Name, string? Address);
 record ImportOriginProdDto(string? Code, string? Name, string? Unit);
 record ImportLotDto(string? Code, string? ProductCode, string? ProductName, string? GlnCode);

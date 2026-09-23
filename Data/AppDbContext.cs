@@ -20,6 +20,9 @@ public class AppDbContext : DbContext
     public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
     public DbSet<VerifyBatch> VerifyBatches => Set<VerifyBatch>();
     public DbSet<VerifyBatchItem> VerifyBatchItems => Set<VerifyBatchItem>();
+    public DbSet<Box> Boxes => Set<Box>();
+    public DbSet<Can> Cans => Set<Can>();
+    public DbSet<BoxItem> BoxItems => Set<BoxItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -75,6 +78,23 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => new { x.BatchId, x.IdNo }).IsUnique();     // 1 tem chỉ xuất hiện 1 lần trong 1 lần ghép
             e.HasOne(x => x.Batch).WithMany(x => x.Items).HasForeignKey(x => x.BatchId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<Box>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã hộp duy nhất theo tenant
+            e.HasOne(x => x.Can).WithMany(x => x.Boxes).HasForeignKey(x => x.CanId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<Can>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã thùng duy nhất theo tenant
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<BoxItem>(e =>
+        {
+            e.HasIndex(x => new { x.BoxId, x.SerialNo }).IsUnique();   // 1 serial chỉ nằm 1 lần trong 1 hộp
+            e.HasOne(x => x.Box).WithMany(x => x.Items).HasForeignKey(x => x.BoxId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }
