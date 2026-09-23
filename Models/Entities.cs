@@ -70,6 +70,21 @@ public class Product : IOrgOwned
     public string? Unit { get; set; }
     public int? BrandId { get; set; }                    // thương hiệu của sản phẩm
     public Brand? Brand { get; set; }
+    public int? WarrantyTypeId { get; set; }             // loại thời hạn bảo hành của sản phẩm
+    public WarrantyType? WarrantyType { get; set; }
+}
+
+// Loại thời hạn bảo hành (master) — port từ Mst_PartWarrantyType của InBrand.
+// Mã loại (A10, A20, …) quyết định cách hiển thị thời hạn bảo hành khi tra cứu sản phẩm.
+public class WarrantyType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // WarrantyType — mã loại (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // WarrantyName — tên hiển thị
+    public bool Active { get; set; } = true;             // FlagActive
+    public string? Remark { get; set; }                   // Remark — ghi chú
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 // Danh mục Màu sắc sản phẩm — port từ Mst_PartColor của InBrand.

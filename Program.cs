@@ -21,6 +21,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
+builder.Services.AddScoped<IWarrantyTypeService, WarrantyTypeService>();
 builder.Services.AddScoped<IProductColorService, ProductColorService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
 builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
@@ -95,6 +96,38 @@ app.MapPut("/api/brands/{id:int}", async (int id, BrandReq r, IBrandService svc)
 app.MapDelete("/api/brands/{id:int}", async (int id, IBrandService svc) =>
 {
     var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Danh mục Loại thời hạn bảo hành (nguồn gốc thương hiệu) — port từ Mst_PartWarrantyType của InBrand.
+app.MapGet("/api/warranty-types", async (string? q, bool? active, IWarrantyTypeService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Type.Id, v.Type.Code, v.Type.Name, v.Type.Active, v.Type.Remark, v.ProductCount
+    })));
+
+app.MapPost("/api/warranty-types", async (WarrantyTypeReq r, IWarrantyTypeService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.Remark, r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/warranty-types/{id:int}", async (int id, WarrantyTypeReq r, IWarrantyTypeService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.Remark, r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/warranty-types/{id:int}", async (int id, IWarrantyTypeService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Gán loại bảo hành cho sản phẩm — port từ FK_MstPartWarrantyType_MstPart của InBrand.
+app.MapPost("/api/warranty-types/assign", async (WarrantyAssignReq r, IWarrantyTypeService svc) =>
+{
+    var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.WarrantyTypeId);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
@@ -410,6 +443,8 @@ app.Run();
 
 record RegisterOrgDto(string Name);
 record BrandReq(string? Code, string? Name, bool Active = true);
+record WarrantyTypeReq(string? Code, string? Name, string? Remark, bool Active = true);
+record WarrantyAssignReq(int ProductId, int? WarrantyTypeId);
 record ColorReq(string? Code, string? Name, string? NameVn, bool Active = true);
 record ColorMapReq(int ProductId, int ColorId, bool IsDefault = false);
 record ColorMapDefaultReq(bool IsDefault);

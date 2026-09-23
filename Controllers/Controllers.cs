@@ -96,6 +96,57 @@ public class BrandController(IBrandService svc) : Controller
     }
 }
 
+public class WarrantyTypeController(IWarrantyTypeService svc, IOriginService origin) : Controller
+{
+    // Danh mục Loại thời hạn bảo hành — port từ Mst_PartWarrantyType của InBrand.
+    public async Task<IActionResult> Index(string? q, bool? active)
+    {
+        ViewBag.Q = q; ViewBag.Active = active;
+        ViewBag.Products = await origin.ProductsAsync();
+        return View(await svc.ListAsync(q, active));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, string name, string? remark, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateAsync(code, name, remark, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, string name, string? remark, bool active)
+    {
+        var (ok, msg) = await svc.UpdateAsync(id, name, remark, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Toggle(int id, bool active)
+    {
+        var (ok, msg) = await svc.SetActiveAsync(id, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var (ok, msg) = await svc.DeleteAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Assign(int productId, int? warrantyTypeId)
+    {
+        var (ok, msg) = await svc.AssignProductAsync(productId, warrantyTypeId);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+}
+
 public class LotController(IOriginService svc) : Controller
 {
     public async Task<IActionResult> Index(string? q) { ViewBag.Q = q; return View(await svc.LotsAsync(q)); }

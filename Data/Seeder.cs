@@ -40,13 +40,19 @@ public static class Seeder
                 new Brand { Code = "SANFI", Name = "Sanfi", Active = true });
             await db.SaveChangesAsync();
 
+            // Danh mục Loại thời hạn bảo hành — port từ Mst_PartWarrantyType của InBrand.
+            var wtA10 = new WarrantyType { Code = "A10", Name = "Bảo hành 10 năm", Remark = "Sứ vệ sinh — kiểu 1", Active = true };
+            var wtA20 = new WarrantyType { Code = "A20", Name = "Bảo hành 20 năm", Remark = "Sứ vệ sinh — kiểu 2", Active = true };
+            var wtA70 = new WarrantyType { Code = "A70", Name = "Bảo hành 7 năm", Remark = "Sen vòi", Active = true };
+            db.WarrantyTypes.AddRange(wtA10, wtA20, wtA70); await db.SaveChangesAsync();
+
             // Danh mục Màu sắc sản phẩm + gán màu — port từ Mst_PartColor / Mst_MapPartColor của InBrand.
             var white = new ProductColor { Code = "TRANG-BONG", Name = "Glossy White", NameVn = "Trắng bóng", Active = true };
             var grey = new ProductColor { Code = "XAM-MO", Name = "Matte Grey", NameVn = "Xám mờ", Active = true };
             db.ProductColors.AddRange(white, grey); await db.SaveChangesAsync();
 
-            // Sản phẩm demo để gán màu (mỗi sản phẩm chỉ 1 màu mặc định).
-            var tile = new Product { Code = "GACH-GRANITE-60", Name = "Gạch Granite 60x60", Unit = "viên" };
+            // Sản phẩm demo để gán màu (mỗi sản phẩm chỉ 1 màu mặc định) + gán loại bảo hành.
+            var tile = new Product { Code = "GACH-GRANITE-60", Name = "Gạch Granite 60x60", Unit = "viên", WarrantyTypeId = wtA10.Id };
             db.Products.Add(tile); await db.SaveChangesAsync();
             db.ProductColorMaps.AddRange(
                 new ProductColorMap { ProductId = tile.Id, ColorId = white.Id, IsDefault = true, Active = true },
@@ -127,7 +133,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };
