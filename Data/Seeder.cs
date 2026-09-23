@@ -52,6 +52,13 @@ public static class Seeder
             var mtGach = new MaterialType { Code = "GACHLATNEN", Name = "Gạch lát nền", Active = true };
             db.MaterialTypes.AddRange(mtSu, mtSen, mtGach); await db.SaveChangesAsync();
 
+            // Danh mục Đơn vị tính — port từ Mst_PartUnit của InBrand.
+            db.PartUnits.AddRange(
+                new PartUnit { Code = "VIEN", Name = "Viên", IsStandard = true, Active = true },
+                new PartUnit { Code = "KG", Name = "Kilôgam", IsStandard = false, Active = true },
+                new PartUnit { Code = "THUNG", Name = "Thùng", IsStandard = false, Active = true });
+            await db.SaveChangesAsync();
+
             // Danh mục Nhà cung cấp — port từ Mst_Supplier của InBrand.
             db.Suppliers.AddRange(
                 new Supplier { Code = "NCC001", Name = "Công ty TNHH Vật liệu Xây dựng Miền Nam", Type = "NORMAL", Active = true },
@@ -177,7 +184,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "PartUnits", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };

@@ -198,6 +198,48 @@ public class MaterialTypeController(IMaterialTypeService svc, IOriginService ori
     }
 }
 
+public class PartUnitController(IPartUnitService svc) : Controller
+{
+    // Danh mục Đơn vị tính (master) — port từ Mst_PartUnit của InBrand.
+    public async Task<IActionResult> Index(string? q, bool? active)
+    {
+        ViewBag.Q = q; ViewBag.Active = active;
+        return View(await svc.ListAsync(q, active));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(string code, string name, bool isStandard = false, bool active = true)
+    {
+        var (ok, msg, _) = await svc.CreateAsync(code, name, isStandard, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, string name, bool isStandard, bool active)
+    {
+        var (ok, msg) = await svc.UpdateAsync(id, name, isStandard, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Toggle(int id, bool active)
+    {
+        var (ok, msg) = await svc.SetActiveAsync(id, active);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var (ok, msg) = await svc.DeleteAsync(id);
+        TempData[ok ? "Success" : "Error"] = msg;
+        return RedirectToAction(nameof(Index));
+    }
+}
+
 public class SupplierController(ISupplierService svc) : Controller
 {
     // Danh mục Nhà cung cấp (master) — port từ Mst_Supplier của InBrand.

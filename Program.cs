@@ -23,6 +23,7 @@ builder.Services.AddScoped<IOriginService, OriginService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IWarrantyTypeService, WarrantyTypeService>();
 builder.Services.AddScoped<IMaterialTypeService, MaterialTypeService>();
+builder.Services.AddScoped<IPartUnitService, PartUnitService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IProductColorService, ProductColorService>();
 builder.Services.AddScoped<IAuthenticityService, AuthenticityService>();
@@ -164,6 +165,31 @@ app.MapDelete("/api/material-types/{id:int}", async (int id, IMaterialTypeServic
 app.MapPost("/api/material-types/assign", async (MaterialTypeAssignReq r, IMaterialTypeService svc) =>
 {
     var (ok, msg) = await svc.AssignProductAsync(r.ProductId, r.MaterialTypeId);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Danh mục Đơn vị tính (master) — port từ Mst_PartUnit của InBrand.
+app.MapGet("/api/part-units", async (string? q, bool? active, IPartUnitService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Unit.Id, v.Unit.Code, v.Unit.Name, v.Unit.IsStandard, v.Unit.Active, v.ProductCount
+    })));
+
+app.MapPost("/api/part-units", async (PartUnitReq r, IPartUnitService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.IsStandard, r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/part-units/{id:int}", async (int id, PartUnitReq r, IPartUnitService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.IsStandard, r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/part-units/{id:int}", async (int id, IPartUnitService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
     return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
 });
 
@@ -656,6 +682,7 @@ record WarrantyTypeReq(string? Code, string? Name, string? Remark, bool Active =
 record WarrantyAssignReq(int ProductId, int? WarrantyTypeId);
 record MaterialTypeReq(string? Code, string? Name, bool Active = true);
 record MaterialTypeAssignReq(int ProductId, int? MaterialTypeId);
+record PartUnitReq(string? Code, string? Name, bool IsStandard = false, bool Active = true);
 record SupplierReq(string? Code, string? Name, bool Active = true);
 record ColorReq(string? Code, string? Name, string? NameVn, bool Active = true);
 record ColorMapReq(int ProductId, int ColorId, bool IsDefault = false);

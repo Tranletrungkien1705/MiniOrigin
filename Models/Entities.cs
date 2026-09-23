@@ -101,6 +101,23 @@ public class MaterialType : IOrgOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Đơn vị tính (master) — port từ Mst_PartUnit của InBrand.
+// Đơn vị đo lường của sản phẩm (VD: viên, kg, thùng). FlagUnitStd đánh dấu đơn vị CHUẨN.
+// Luật (theo MstPartUnitManager.MstPartUnitCheckDB + Add/Update/Remove):
+//  - PartUnitCode bắt buộc + duy nhất theo tenant (Add: Flag.No → mã phải CHƯA tồn tại;
+//    Update/Remove: Flag.Yes → mã phải TỒN TẠI);
+//  - PartUnitName bắt buộc; cờ hoạt động FlagActive; FlagUnitStd = đơn vị chuẩn.
+public class PartUnit : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // PartUnitCode — mã đơn vị tính (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // PartUnitName — tên đơn vị tính
+    public bool IsStandard { get; set; }                  // FlagUnitStd — đơn vị chuẩn
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Nhà cung cấp (master) — port từ Mst_Supplier của InBrand.
 // Đối tác cung cấp nguyên vật liệu/hàng hoá; SupType mặc định NORMAL khi tạo.
 public class Supplier : IOrgOwned

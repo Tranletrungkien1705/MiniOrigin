@@ -1,0 +1,60 @@
+@model List<PartUnitView>
+@{
+    ViewData["Title"] = "Đơn vị tính";
+    var q = (string?)ViewBag.Q;
+    var active = (bool?)ViewBag.Active;
+}
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <p class="text-muted small">Đơn vị tính — danh mục master đo lường sản phẩm (viên, kg, thùng…). Mã đơn vị duy nhất theo đơn vị. Port từ Mst_PartUnit của InBrand.</p>
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-sm-6"><input name="q" value="@q" class="form-control form-control-sm" placeholder="Tìm mã / tên đơn vị tính" /></div>
+            <div class="col-sm-3"><select name="active" class="form-select form-select-sm">
+                <option value="">Tất cả trạng thái</option>
+                <option value="true" selected="@(active == true)">Đang hoạt động</option>
+                <option value="false" selected="@(active == false)">Ngừng</option>
+            </select></div>
+            <div class="col-sm-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Lọc</button></div>
+        </form>
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã</th><th>Tên đơn vị tính</th><th class="text-center">Chuẩn</th><th class="text-center">Sản phẩm</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var v in Model)
+            {
+                <tr>
+                    <td class="fw-semibold small"><code>@v.Unit.Code</code></td>
+                    <td>@v.Unit.Name</td>
+                    <td class="text-center">@if (v.Unit.IsStandard) { <span class="badge bg-primary">Chuẩn</span> }</td>
+                    <td class="text-center">@v.ProductCount</td>
+                    <td>@if (v.Unit.Active) { <span class="badge bg-success">Hoạt động</span> } else { <span class="badge bg-secondary">Ngừng</span> }</td>
+                    <td class="text-end">
+                        <form asp-action="Toggle" method="post" class="d-inline">@Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@v.Unit.Id" />
+                            <input type="hidden" name="active" value="@((!v.Unit.Active).ToString().ToLower())" />
+                            <button class="btn btn-sm btn-outline-secondary" title="@(v.Unit.Active ? "Ngừng" : "Kích hoạt")"><i class="bi @(v.Unit.Active ? "bi-pause-circle" : "bi-play-circle")"></i></button>
+                        </form>
+                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Xoá đơn vị tính @v.Unit.Code?');">@Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@v.Unit.Id" />
+                            <button class="btn btn-sm btn-outline-danger" title="Xoá"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="6" class="text-center text-muted py-4">Chưa có đơn vị tính.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4">
+        <div class="card mb-3"><div class="card-body">
+            <h6 class="fw-bold mb-3">Thêm đơn vị tính</h6>
+            <form asp-action="Create" method="post">@Html.AntiForgeryToken()
+                <div class="mb-2"><input name="code" class="form-control text-uppercase" placeholder="Mã đơn vị (VD VIEN) *" required /></div>
+                <div class="mb-2"><input name="name" class="form-control" placeholder="Tên đơn vị tính *" required /></div>
+                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="isStandard" value="true" id="puStd" /><label class="form-check-label" for="puStd">Đơn vị chuẩn</label></div>
+                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="active" value="true" id="puActive" checked /><label class="form-check-label" for="puActive">Đang hoạt động</label></div>
+                <button class="btn btn-primary w-100"><i class="bi bi-plus-lg me-1"></i>Thêm</button>
+            </form>
+            <div class="small text-muted mt-3">Chỉ có tối đa 1 đơn vị chuẩn — đặt chuẩn cho đơn vị này sẽ bỏ chuẩn ở đơn vị khác. Không thể xoá đơn vị còn sản phẩm tham chiếu.</div>
+        </div></div>
+    </div>
+</div>
