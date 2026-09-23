@@ -355,6 +355,48 @@ public class BomLine : IOrgOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Loại đại lý (master) — port từ Mst_DealerType của InBrand.
+// Phân loại đại lý (VD: Đại lý cấp 1, Nhà phân phối, Cửa hàng bán lẻ).
+public class DealerType : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // DLType — mã loại đại lý (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // DLTypeName — tên loại đại lý
+    public bool Active { get; set; } = true;             // FlagActive
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// Đại lý (master) — port từ Mst_Dealer của InBrand.
+// Đại lý là điểm bán/xác thực sản phẩm chính hãng; có phân cấp cha–con (DLCodeParent).
+// Luật (theo MstDealerManager.MstDealerAddX/Update/Remove + MstDealerCheckDB):
+//  - DLCode bắt buộc + duy nhất theo tenant (Add: Flag.No → mã phải CHƯA tồn tại;
+//    Update/Remove: Flag.Yes → mã phải TỒN TẠI);
+//  - DLName bắt buộc;
+//  - DLCodeParent (nếu có) phải TỒN TẠI & ĐANG HOẠT ĐỘNG;
+//  - khi tạo: FlagRoot=No, DLBUCode/DLBUPattern="X", DLLevel=1, FlagActive=Active.
+public class Dealer : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public string Code { get; set; } = "";               // DLCode — mã đại lý (duy nhất theo tenant)
+    public string Name { get; set; } = "";               // DLName — tên đại lý
+    public int? ParentId { get; set; }                    // DLCodeParent — đại lý cấp trên
+    public Dealer? Parent { get; set; }
+    public int? DealerTypeId { get; set; }                // DLType — loại đại lý
+    public DealerType? DealerType { get; set; }
+    public string? InvCode { get; set; }                  // InvCode — mã kho gắn với đại lý
+    public string? MaterialTypeCode { get; set; }         // PMType — nhóm vật liệu đại lý phụ trách
+    public string? SkycicSiteID { get; set; }             // SkycicSiteID — mã site trên hệ thống Skycic
+    public bool IsRoot { get; set; }                      // FlagRoot — đại lý gốc
+    public string BuCode { get; set; } = "X";            // DLBUCode — mã đơn vị kinh doanh
+    public string BuPattern { get; set; } = "X";         // DLBUPattern — mẫu mã đơn vị kinh doanh
+    public double Level { get; set; } = 1;                // DLLevel — cấp trong cây đại lý
+    public bool Active { get; set; } = true;             // FlagActive
+    public string? Remark { get; set; }                   // Remark — ghi chú
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // Sự kiện thực tế gắn với lô (1 CTE tại 1 GLN + giá trị KDE)
 public class TraceEvent : IOrgOwned
 {

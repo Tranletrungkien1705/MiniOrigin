@@ -30,6 +30,7 @@ builder.Services.AddScoped<IVerifyBatchService, VerifyBatchService>();
 builder.Services.AddScoped<IPackingService, PackingService>();
 builder.Services.AddScoped<ISearchLogService, SearchLogService>();
 builder.Services.AddScoped<IBomService, BomService>();
+builder.Services.AddScoped<IDealerService, DealerService>();
 builder.Services.AddFleetObs();
 builder.Services.AddControllersWithViews();
 
@@ -502,6 +503,75 @@ app.MapPost("/api/search-logs", async (SearchLogReq r, ISearchLogService svc) =>
     return Results.Ok(new { log.Id });
 });
 
+// Danh mục Đại lý (nguồn gốc thương hiệu) — port từ Mst_Dealer / Mst_DealerType của InBrand.
+// Loại đại lý (Mst_DealerType).
+app.MapGet("/api/dealer-types", async (string? q, bool? active, IDealerService svc) =>
+    Results.Ok((await svc.ListTypesAsync(q, active)).Select(v => new
+    {
+        v.Type.Id, v.Type.Code, v.Type.Name, v.Type.Active, v.DealerCount
+    })));
+
+app.MapPost("/api/dealer-types", async (DealerTypeReq r, IDealerService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateTypeAsync(r.Code ?? "", r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/dealer-types/{id:int}", async (int id, DealerTypeReq r, IDealerService svc) =>
+{
+    var (ok, msg) = await svc.UpdateTypeAsync(id, r.Name ?? "", r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/dealer-types/{id:int}", async (int id, IDealerService svc) =>
+{
+    var (ok, msg) = await svc.DeleteTypeAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+// Đại lý (Mst_Dealer) — phân cấp cha–con; đại lý cấp trên phải tồn tại & đang hoạt động.
+app.MapGet("/api/dealers", async (string? q, bool? active, IDealerService svc) =>
+    Results.Ok((await svc.ListAsync(q, active)).Select(v => new
+    {
+        v.Dealer.Id, v.Dealer.Code, v.Dealer.Name, v.Dealer.ParentId, parentName = v.ParentName,
+        v.Dealer.DealerTypeId, dealerTypeName = v.DealerTypeName, v.Dealer.InvCode,
+        v.Dealer.MaterialTypeCode, v.Dealer.SkycicSiteID, v.Dealer.IsRoot, v.Dealer.Level,
+        v.Dealer.Active, v.Dealer.Remark, v.ChildCount
+    })));
+
+app.MapGet("/api/dealers/{id:int}", async (int id, IDealerService svc) =>
+{
+    var v = await svc.GetAsync(id);
+    if (v == null) return Results.NotFound(new { error = "Không tìm thấy đại lý." });
+    return Results.Ok(new
+    {
+        v.Dealer.Id, v.Dealer.Code, v.Dealer.Name, v.Dealer.ParentId, parentName = v.ParentName,
+        v.Dealer.DealerTypeId, dealerTypeName = v.DealerTypeName, v.Dealer.InvCode,
+        v.Dealer.MaterialTypeCode, v.Dealer.SkycicSiteID, v.Dealer.IsRoot, v.Dealer.BuCode,
+        v.Dealer.BuPattern, v.Dealer.Level, v.Dealer.Active, v.Dealer.Remark, v.ChildCount
+    });
+});
+
+app.MapPost("/api/dealers", async (DealerReq r, IDealerService svc) =>
+{
+    var (ok, msg, id) = await svc.CreateAsync(r.Code ?? "", r.Name ?? "", r.ParentId, r.DealerTypeId,
+        r.InvCode, r.MaterialTypeCode, r.SkycicSiteID, r.Remark, r.Active);
+    return ok ? Results.Ok(new { id }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapPut("/api/dealers/{id:int}", async (int id, DealerReq r, IDealerService svc) =>
+{
+    var (ok, msg) = await svc.UpdateAsync(id, r.Name ?? "", r.ParentId, r.DealerTypeId,
+        r.InvCode, r.MaterialTypeCode, r.SkycicSiteID, r.Remark, r.Active);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
+app.MapDelete("/api/dealers/{id:int}", async (int id, IDealerService svc) =>
+{
+    var (ok, msg) = await svc.DeleteAsync(id);
+    return ok ? Results.Ok(new { ok }) : Results.BadRequest(new { error = msg });
+});
+
 app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Name)) return Results.BadRequest(new { error = "Cần Name." });
@@ -607,3 +677,5 @@ record BomTypeReq(string? Code, string? Description, bool Active = true);
 record BomLineReq(int ComponentProductId, decimal Qty, string? Unit);
 record BomReq(string? Code, int ParentProductId, int BomTypeId, bool IsDefault, string? Remark, List<BomLineReq>? Lines);
 record BomUpdateReq(bool IsDefault, string? Remark);
+record DealerTypeReq(string? Code, string? Name, bool Active = true);
+record DealerReq(string? Code, string? Name, int? ParentId, int? DealerTypeId, string? InvCode, string? MaterialTypeCode, string? SkycicSiteID, string? Remark, bool Active = true);

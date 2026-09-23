@@ -32,6 +32,8 @@ public class AppDbContext : DbContext
     public DbSet<BomType> BomTypes => Set<BomType>();
     public DbSet<Bom> Boms => Set<Bom>();
     public DbSet<BomLine> BomLines => Set<BomLine>();
+    public DbSet<DealerType> DealerTypes => Set<DealerType>();
+    public DbSet<Dealer> Dealers => Set<Dealer>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -140,6 +142,14 @@ public class AppDbContext : DbContext
             e.Property(x => x.ValCost).HasPrecision(18, 3);
             e.HasOne(x => x.Bom).WithMany(x => x.Lines).HasForeignKey(x => x.BomId);
             e.HasOne(x => x.ComponentProduct).WithMany().HasForeignKey(x => x.ComponentProductId);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<DealerType>(e => { e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique(); e.HasQueryFilter(x => x.OrgId == _orgId); });
+        b.Entity<Dealer>(e =>
+        {
+            e.HasIndex(x => new { x.OrgId, x.Code }).IsUnique();       // mã đại lý duy nhất theo tenant
+            e.HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId);
+            e.HasOne(x => x.DealerType).WithMany().HasForeignKey(x => x.DealerTypeId);
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
     }

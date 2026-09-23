@@ -150,6 +150,18 @@ public static class Seeder
                 new BomLine { BomId = bom.Id, ComponentProductId = body.Id, Qty = 1, Unit = "viên", ValCost = 0, Status = BomStatus.Approve },
                 new BomLine { BomId = bom.Id, ComponentProductId = glaze.Id, Qty = 0.35m, Unit = "kg", ValCost = 0, Status = BomStatus.Approve });
             await db.SaveChangesAsync();
+
+            // Danh mục Đại lý + Loại đại lý demo — port từ Mst_Dealer / Mst_DealerType của InBrand.
+            var dtCap1 = new DealerType { Code = "CAP1", Name = "Đại lý cấp 1", Active = true };
+            var dtBanLe = new DealerType { Code = "BANLE", Name = "Cửa hàng bán lẻ", Active = true };
+            db.DealerTypes.AddRange(dtCap1, dtBanLe); await db.SaveChangesAsync();
+
+            var dlRoot = new Dealer { Code = "DL-HCM", Name = "Đại lý HCM", DealerTypeId = dtCap1.Id, SkycicSiteID = "SITE-HCM-01", Active = true };
+            db.Dealers.Add(dlRoot); await db.SaveChangesAsync();
+            db.Dealers.AddRange(
+                new Dealer { Code = "DL-HCM-Q1", Name = "Cửa hàng Quận 1", ParentId = dlRoot.Id, DealerTypeId = dtBanLe.Id, Active = true },
+                new Dealer { Code = "DL-HN", Name = "Đại lý Hà Nội", DealerTypeId = dtCap1.Id, Active = true });
+            await db.SaveChangesAsync();
         }
     }
 
@@ -165,7 +177,7 @@ public static class Seeder
     {
         if (!db.Database.IsNpgsql()) return;
         var def = TenantContext.DefaultOrgId;
-        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines" };
+        var tables = new[] { "Glns", "Ctes", "Kdes", "Brands", "WarrantyTypes", "MaterialTypes", "Suppliers", "Products", "ProductColors", "ProductColorMaps", "Lots", "LotLinks", "Events", "ProductUnits", "VerifyBatches", "VerifyBatchItems", "Boxes", "Cans", "BoxItems", "SearchLogs", "BomTypes", "Boms", "BomLines", "DealerTypes", "Dealers" };
         var sql = new List<string> {
             "CREATE TABLE IF NOT EXISTS miniorigin.\"Orgs\" (\"Id\" uuid PRIMARY KEY, \"Name\" text NOT NULL DEFAULT '', \"ApiKey\" text NOT NULL DEFAULT '', \"CreatedAt\" timestamp NOT NULL DEFAULT now())",
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Orgs_ApiKey\" ON miniorigin.\"Orgs\" (\"ApiKey\")" };
